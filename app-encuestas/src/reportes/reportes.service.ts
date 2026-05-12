@@ -5,6 +5,7 @@ import { TipoPregunta, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ResumenQueryDto } from './dto/resumen-query.dto';
 import { EncuestasQueryDto } from './dto/encuestas-query.dto';
+import { buildFechaDiaFilter, formatEcuadorDateTime } from '../common/utils/ecuador-date.util';
 
 @Injectable()
 export class ReportesService {
@@ -17,20 +18,8 @@ export class ReportesService {
     if (q.colaboradorId !== undefined) where.colaboradorId = q.colaboradorId;
     if (q.nombreSocio) where.nombreSocio = { contains: q.nombreSocio, mode: 'insensitive' };
 
-    if (q.fechaDesde !== undefined || q.fechaHasta !== undefined) {
-      where.fechaEnvio = {
-        ...(q.fechaDesde ? { gte: new Date(q.fechaDesde) } : {}),
-        ...(q.fechaHasta
-          ? {
-              lte: (() => {
-                const d = new Date(q.fechaHasta!);
-                d.setHours(23, 59, 59, 999);
-                return d;
-              })(),
-            }
-          : {}),
-      };
-    }
+    const fechaDiaFilter = buildFechaDiaFilter(q.fechaDesde, q.fechaHasta);
+    if (fechaDiaFilter) where.fechaDia = fechaDiaFilter;
 
     return where;
   }
@@ -232,9 +221,10 @@ export class ReportesService {
     ];
 
     for (const encuesta of encuestas) {
+      const { fecha, hora } = formatEcuadorDateTime(encuesta.fechaEnvio);
       const row: Record<string, string | number> = {
-        fecha: encuesta.fechaEnvio.toLocaleDateString('es-EC'),
-        hora: encuesta.fechaEnvio.toLocaleTimeString('es-EC'),
+        fecha,
+        hora,
         area: encuesta.area.nombre,
         colaborador: encuesta.colaborador
           ? `${encuesta.colaborador.nombre} ${encuesta.colaborador.apellido}`.trim()

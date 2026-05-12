@@ -87,6 +87,7 @@ model Encuesta {
   ipAddress   String @db.VarChar(45)
 
   fechaEnvio DateTime @default(now())
+  fechaDia   DateTime @db.Date
 
   respuestas Respuesta[]
 
@@ -96,7 +97,10 @@ model Encuesta {
   @@index([ipAddress])
   @@index([areaId, fechaEnvio])
   @@index([colaboradorId, fechaEnvio])
-  @@index([ipAddress, areaId, fechaEnvio])
+  @@index([fechaDia])
+  @@index([areaId, fechaDia])
+  @@index([colaboradorId, fechaDia])
+  @@index([ipAddress, areaId, fechaDia])
 }
 
 model Respuesta {

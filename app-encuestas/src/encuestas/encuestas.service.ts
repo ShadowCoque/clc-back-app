@@ -8,6 +8,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { SubmitEncuestaDto } from './dto/submit-encuesta.dto';
 import { TipoPregunta } from '@prisma/client';
+import { getEcuadorTodayForDb } from '../common/utils/ecuador-date.util';
 
 @Injectable()
 export class EncuestasService {
@@ -27,17 +28,10 @@ export class EncuestasService {
         throw new BadRequestException('El colaborador no pertenece a esta área');
     }
 
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date();
-    endOfDay.setHours(23, 59, 59, 999);
+    const fechaDia = getEcuadorTodayForDb();
 
     const existing = await this.prisma.encuesta.findFirst({
-      where: {
-        ipAddress,
-        areaId: dto.areaId,
-        fechaEnvio: { gte: startOfDay, lte: endOfDay },
-      },
+      where: { ipAddress, areaId: dto.areaId, fechaDia },
     });
     if (existing) {
       throw new HttpException(
@@ -82,6 +76,7 @@ export class EncuestasService {
           nombreSocio: dto.nombreSocio,
           ipAddress,
           fechaEnvio: new Date(),
+          fechaDia,
         },
       });
 
