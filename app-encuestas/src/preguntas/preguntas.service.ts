@@ -1,18 +1,20 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePreguntaDto } from './dto/create-pregunta.dto';
 import { UpdatePreguntaDto } from './dto/update-pregunta.dto';
 
 const ORDEN_CONFLICT_MSG = 'Ya existe una pregunta con ese orden en esta área.';
 
+// Detecta P2002 sin usar instanceof para evitar problemas con Prisma 7 + driver adapters.
+// El único @@unique compuesto en Pregunta es [areaId, orden], así que cualquier P2002
+// en este servicio corresponde a ese constraint.
 function isOrdenConflict(err: unknown): boolean {
-  return (
-    err instanceof Prisma.PrismaClientKnownRequestError &&
-    err.code === 'P2002' &&
-    Array.isArray((err.meta as { target?: string[] })?.target) &&
-    (err.meta as { target: string[] }).target.includes('orden')
-  );
+  if (!err || typeof err !== 'object') return false;
+  const e = err as Record<string, unknown>;
+  if (e['code'] === 'P2002') return true;
+  // Algunas versiones del adapter exponen el código en una propiedad anidada
+  const cause = e['cause'] as Record<string, unknown> | undefined;
+  return cause?.['code'] === 'P2002';
 }
 
 @Injectable()
