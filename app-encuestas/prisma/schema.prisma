@@ -24,6 +24,7 @@ model Area {
   nombre      String  @unique @db.VarChar(100)
   slug        String  @unique @db.VarChar(100)
   descripcion String? @db.Text
+  imagenUrl   String? @db.VarChar(255)
   activa      Boolean @default(true)
 
   createdAt DateTime @default(now())

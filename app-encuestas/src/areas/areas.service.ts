@@ -10,7 +10,7 @@ export class AreasService {
   findAll() {
     return this.prisma.area.findMany({
       where: { activa: true },
-      select: { id: true, nombre: true, slug: true, descripcion: true },
+      select: { id: true, nombre: true, slug: true, descripcion: true, imagenUrl: true },
     });
   }
 
@@ -22,6 +22,7 @@ export class AreasService {
         nombre: true,
         slug: true,
         descripcion: true,
+        imagenUrl: true,
         preguntas: {
           where: { activa: true },
           orderBy: { orden: 'asc' },
@@ -43,7 +44,10 @@ export class AreasService {
 
   async update(id: number, dto: UpdateAreaDto) {
     await this.findById(id);
-    return this.prisma.area.update({ where: { id }, data: dto });
+    const data = Object.fromEntries(
+      Object.entries(dto).filter(([, value]) => value !== undefined),
+    );
+    return this.prisma.area.update({ where: { id }, data });
   }
 
   private async findById(id: number) {

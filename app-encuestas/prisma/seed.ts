@@ -35,26 +35,31 @@ const areasSeed = [
     nombre: 'Alimentos y Bebidas',
     slug: 'alimentos-bebidas',
     descripcion: 'Área encargada de servicios de alimentos, bebidas y atención relacionada.',
+    imagenUrl: '/areas/alimentos-bebidas.jpg',
   },
   {
     nombre: 'Área Comercial',
     slug: 'area-comercial',
     descripcion: 'Área encargada de la atención comercial y procesos relacionados con socios o clientes.',
+    imagenUrl: '/areas/area-comercial.jpg',
   },
   {
     nombre: 'Área de Socios',
     slug: 'area-socios',
     descripcion: 'Área encargada de la atención y gestión relacionada con socios del club.',
+    imagenUrl: '/areas/area-socios.jpg',
   },
   {
     nombre: 'Áreas Húmedas',
     slug: 'areas-humedas',
     descripcion: 'Área relacionada con piscina, sauna, turco, hidromasaje u otros espacios húmedos.',
+    imagenUrl: '/areas/areas-humedas.jpg',
   },
   {
     nombre: 'Cafetería',
     slug: 'cafeteria',
     descripcion: 'Área encargada de la atención en cafetería.',
+    imagenUrl: '/areas/cafeteria.jpg',
   },
 ];
 
@@ -177,6 +182,7 @@ const areaPruebasReportesSeed = {
   nombre: 'Pruebas Reportes',
   slug: 'pruebas-reportes',
   descripcion: 'Área ficticia para probar reportes, filtros, paginación, fechas y exportación Excel.',
+  imagenUrl: '/areas/pruebas-reportes.jpg',
 };
 
 const colaboradoresPruebasReportesSeed = [
@@ -503,12 +509,14 @@ async function seedAreas() {
       update: {
         nombre: area.nombre,
         descripcion: area.descripcion,
+        imagenUrl: area.imagenUrl,
         activa: true,
       },
       create: {
         nombre: area.nombre,
         slug: area.slug,
         descripcion: area.descripcion,
+        imagenUrl: area.imagenUrl,
         activa: true,
       },
       select: {
@@ -756,6 +764,7 @@ async function seedAreaPruebasReportes() {
       nombre: areaPruebasReportesSeed.nombre,
       slug: areaPruebasReportesSeed.slug,
       descripcion: areaPruebasReportesSeed.descripcion,
+      imagenUrl: areaPruebasReportesSeed.imagenUrl,
       activa: true,
     },
   });

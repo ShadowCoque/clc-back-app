@@ -16,6 +16,11 @@ export class UpdateAreaDto {
   descripcion?: string;
 
   @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  imagenUrl?: string;
+
+  @IsOptional()
   @IsBoolean()
   activa?: boolean;
 }

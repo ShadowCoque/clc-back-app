@@ -12,4 +12,9 @@ export class CreateAreaDto {
   @IsOptional()
   @IsString()
   descripcion?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  imagenUrl?: string;
 }
