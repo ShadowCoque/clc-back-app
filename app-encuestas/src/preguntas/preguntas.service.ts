@@ -1,7 +1,19 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePreguntaDto } from './dto/create-pregunta.dto';
 import { UpdatePreguntaDto } from './dto/update-pregunta.dto';
+
+const ORDEN_CONFLICT_MSG = 'Ya existe una pregunta con ese orden en esta área.';
+
+function isOrdenConflict(err: unknown): boolean {
+  return (
+    err instanceof Prisma.PrismaClientKnownRequestError &&
+    err.code === 'P2002' &&
+    Array.isArray((err.meta as { target?: string[] })?.target) &&
+    (err.meta as { target: string[] }).target.includes('orden')
+  );
+}
 
 @Injectable()
 export class PreguntasService {
@@ -15,15 +27,25 @@ export class PreguntasService {
     });
   }
 
-  create(dto: CreatePreguntaDto) {
-    return this.prisma.pregunta.create({
-      data: { ...dto, obligatoria: dto.obligatoria ?? true },
-    });
+  async create(dto: CreatePreguntaDto) {
+    try {
+      return await this.prisma.pregunta.create({
+        data: { ...dto, obligatoria: dto.obligatoria ?? true },
+      });
+    } catch (err) {
+      if (isOrdenConflict(err)) throw new ConflictException(ORDEN_CONFLICT_MSG);
+      throw err;
+    }
   }
 
   async update(id: number, dto: UpdatePreguntaDto) {
     await this.findById(id);
-    return this.prisma.pregunta.update({ where: { id }, data: dto });
+    try {
+      return await this.prisma.pregunta.update({ where: { id }, data: dto });
+    } catch (err) {
+      if (isOrdenConflict(err)) throw new ConflictException(ORDEN_CONFLICT_MSG);
+      throw err;
+    }
   }
 
   async remove(id: number) {
