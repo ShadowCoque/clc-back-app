@@ -68,3 +68,45 @@ export function formatEcuadorDateTime(date: Date): { fecha: string; hora: string
     }).format(date),
   };
 }
+
+/**
+ * Retorna YYYY-MM-DD desde un campo @db.Date almacenado como UTC-midnight.
+ * Usar con Encuesta.fechaDia.
+ */
+export function formatFechaDia(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
+/**
+ * Retorna HH:mm:ss del timestamp convertido a America/Guayaquil.
+ * Usar con Encuesta.fechaEnvio.
+ */
+export function formatHoraEcuador(date: Date): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: TZ,
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).format(date);
+}
+
+/**
+ * Retorna "YYYY-MM-DD HH:mm:ss" con fecha de fechaDia y hora en Ecuador.
+ * Usar con Encuesta.fechaEnvio para display completo.
+ */
+export function formatFechaHoraEcuador(date: Date): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: TZ,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).formatToParts(date);
+
+  const get = (type: string) => parts.find((p) => p.type === type)!.value;
+  return `${get('year')}-${get('month')}-${get('day')} ${get('hour')}:${get('minute')}:${get('second')}`;
+}

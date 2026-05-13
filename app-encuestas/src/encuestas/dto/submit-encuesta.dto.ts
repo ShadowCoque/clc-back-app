@@ -5,6 +5,8 @@ import {
   IsBoolean,
   ValidateNested,
   IsArray,
+  Min,
+  Max,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -19,6 +21,12 @@ export class RespuestaItemDto {
   @IsOptional()
   @IsString()
   valorTexto?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(10)
+  valorNumero?: number;
 }
 
 export class SubmitEncuestaDto {

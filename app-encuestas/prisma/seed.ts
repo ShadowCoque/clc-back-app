@@ -125,15 +125,21 @@ const preguntasGenericasSeed = [
     obligatoria: true,
   },
   {
+    texto: '¿Qué tan probable es que recomiende el club?',
+    tipo: TipoPregunta.ESCALA_1_10,
+    orden: 5,
+    obligatoria: true,
+  },
+  {
     texto: 'Cuéntenos brevemente en qué podríamos mejorar o qué le agradó.',
     tipo: TipoPregunta.DESCRIPCION,
-    orden: 5,
+    orden: 6,
     obligatoria: false,
   },
   {
     texto: 'Nombres y apellidos del socio',
     tipo: TipoPregunta.NOMBRE_SOCIO,
-    orden: 6,
+    orden: 7,
     obligatoria: true,
   },
 ];
@@ -218,15 +224,21 @@ const preguntasPruebasReportesSeed = [
     obligatoria: true,
   },
   {
+    texto: '¿Qué tan probable es que recomiende el club?',
+    tipo: TipoPregunta.ESCALA_1_10,
+    orden: 5,
+    obligatoria: true,
+  },
+  {
     texto: 'Comentario de prueba para reportes',
     tipo: TipoPregunta.DESCRIPCION,
-    orden: 5,
+    orden: 6,
     obligatoria: false,
   },
   {
     texto: 'Nombres y apellidos del socio',
     tipo: TipoPregunta.NOMBRE_SOCIO,
-    orden: 6,
+    orden: 7,
     obligatoria: true,
   },
 ];
@@ -244,8 +256,9 @@ const encuestasPruebasReportesSeed = [
       { orden: 2, valorBooleano: true },
       { orden: 3, valorBooleano: true },
       { orden: 4, valorBooleano: true },
-      { orden: 5, valorTexto: 'Excelente atención en la prueba de inicio de mayo.' },
-      { orden: 6, valorTexto: 'Carlos Andrade' },
+      { orden: 5, valorNumero: 9 },
+      { orden: 6, valorTexto: 'Excelente atención en la prueba de inicio de mayo.' },
+      { orden: 7, valorTexto: 'Carlos Andrade' },
     ],
   },
   {
@@ -259,8 +272,9 @@ const encuestasPruebasReportesSeed = [
       { orden: 2, valorBooleano: false },
       { orden: 3, valorBooleano: true },
       { orden: 4, valorBooleano: true },
-      { orden: 5, valorTexto: 'El servicio fue bueno, pero el requerimiento demoró.' },
-      { orden: 6, valorTexto: 'María López' },
+      { orden: 5, valorNumero: 7 },
+      { orden: 6, valorTexto: 'El servicio fue bueno, pero el requerimiento demoró.' },
+      { orden: 7, valorTexto: 'María López' },
     ],
   },
   {
@@ -274,8 +288,9 @@ const encuestasPruebasReportesSeed = [
       { orden: 2, valorBooleano: true },
       { orden: 3, valorBooleano: false },
       { orden: 4, valorBooleano: true },
-      { orden: 5, valorTexto: 'La atención fue correcta, pero el tiempo puede mejorar.' },
-      { orden: 6, valorTexto: 'Jorge Cevallos' },
+      { orden: 5, valorNumero: 6 },
+      { orden: 6, valorTexto: 'La atención fue correcta, pero el tiempo puede mejorar.' },
+      { orden: 7, valorTexto: 'Jorge Cevallos' },
     ],
   },
   {
@@ -289,8 +304,9 @@ const encuestasPruebasReportesSeed = [
       { orden: 2, valorBooleano: true },
       { orden: 3, valorBooleano: false },
       { orden: 4, valorBooleano: true },
-      { orden: 5, valorTexto: 'Prueba para validar filtros de mitad de mes.' },
-      { orden: 6, valorTexto: 'Gabriela Moncayo' },
+      { orden: 5, valorNumero: 8 },
+      { orden: 6, valorTexto: 'Prueba para validar filtros de mitad de mes.' },
+      { orden: 7, valorTexto: 'Gabriela Moncayo' },
     ],
   },
   {
@@ -304,8 +320,9 @@ const encuestasPruebasReportesSeed = [
       { orden: 2, valorBooleano: true },
       { orden: 3, valorBooleano: false },
       { orden: 4, valorBooleano: false },
-      { orden: 5, valorTexto: 'Buena atención, pero faltó seguimiento.' },
-      { orden: 6, valorTexto: 'Patricia Molina' },
+      { orden: 5, valorNumero: 5 },
+      { orden: 6, valorTexto: 'Buena atención, pero faltó seguimiento.' },
+      { orden: 7, valorTexto: 'Patricia Molina' },
     ],
   },
   {
@@ -319,8 +336,9 @@ const encuestasPruebasReportesSeed = [
       { orden: 2, valorBooleano: true },
       { orden: 3, valorBooleano: true },
       { orden: 4, valorBooleano: true },
-      { orden: 5, valorTexto: 'Prueba nocturna: debe contar como mayo por fechaDia.' },
-      { orden: 6, valorTexto: 'Andrés Salazar' },
+      { orden: 5, valorNumero: 10 },
+      { orden: 6, valorTexto: 'Prueba nocturna: debe contar como mayo por fechaDia.' },
+      { orden: 7, valorTexto: 'Andrés Salazar' },
     ],
   },
 
@@ -336,8 +354,9 @@ const encuestasPruebasReportesSeed = [
       { orden: 2, valorBooleano: false },
       { orden: 3, valorBooleano: true },
       { orden: 4, valorBooleano: false },
-      { orden: 5, valorTexto: 'Encuesta de inicio de junio para probar filtros por fecha.' },
-      { orden: 6, valorTexto: 'Daniela Torres' },
+      { orden: 5, valorNumero: 4 },
+      { orden: 6, valorTexto: 'Encuesta de inicio de junio para probar filtros por fecha.' },
+      { orden: 7, valorTexto: 'Daniela Torres' },
     ],
   },
   {
@@ -351,8 +370,9 @@ const encuestasPruebasReportesSeed = [
       { orden: 2, valorBooleano: false },
       { orden: 3, valorBooleano: false },
       { orden: 4, valorBooleano: true },
-      { orden: 5, valorTexto: 'Prueba adicional para paginación y reportes de junio.' },
-      { orden: 6, valorTexto: 'Roberto Castillo' },
+      { orden: 5, valorNumero: 7 },
+      { orden: 6, valorTexto: 'Prueba adicional para paginación y reportes de junio.' },
+      { orden: 7, valorTexto: 'Roberto Castillo' },
     ],
   },
   {
@@ -366,8 +386,9 @@ const encuestasPruebasReportesSeed = [
       { orden: 2, valorBooleano: true },
       { orden: 3, valorBooleano: true },
       { orden: 4, valorBooleano: false },
-      { orden: 5, valorTexto: 'Prueba para validar filtros de mitad de junio.' },
-      { orden: 6, valorTexto: 'Fernanda Ruiz' },
+      { orden: 5, valorNumero: 9 },
+      { orden: 6, valorTexto: 'Prueba para validar filtros de mitad de junio.' },
+      { orden: 7, valorTexto: 'Fernanda Ruiz' },
     ],
   },
   {
@@ -381,8 +402,9 @@ const encuestasPruebasReportesSeed = [
       { orden: 2, valorBooleano: true },
       { orden: 3, valorBooleano: true },
       { orden: 4, valorBooleano: true },
-      { orden: 5, valorTexto: 'Prueba con respuestas mixtas para resumen.' },
-      { orden: 6, valorTexto: 'Sebastián Rivas' },
+      { orden: 5, valorNumero: 8 },
+      { orden: 6, valorTexto: 'Prueba con respuestas mixtas para resumen.' },
+      { orden: 7, valorTexto: 'Sebastián Rivas' },
     ],
   },
   {
@@ -396,8 +418,9 @@ const encuestasPruebasReportesSeed = [
       { orden: 2, valorBooleano: true },
       { orden: 3, valorBooleano: true },
       { orden: 4, valorBooleano: true },
-      { orden: 5, valorTexto: 'Prueba de cierre de junio en horario normal.' },
-      { orden: 6, valorTexto: 'Valeria Castro' },
+      { orden: 5, valorNumero: 10 },
+      { orden: 6, valorTexto: 'Prueba de cierre de junio en horario normal.' },
+      { orden: 7, valorTexto: 'Valeria Castro' },
     ],
   },
   {
@@ -411,8 +434,9 @@ const encuestasPruebasReportesSeed = [
       { orden: 2, valorBooleano: false },
       { orden: 3, valorBooleano: true },
       { orden: 4, valorBooleano: false },
-      { orden: 5, valorTexto: 'Prueba nocturna: puede verse como julio en UTC, pero debe contar como junio.' },
-      { orden: 6, valorTexto: 'Esteban Paredes' },
+      { orden: 5, valorNumero: 6 },
+      { orden: 6, valorTexto: 'Prueba nocturna: puede verse como julio en UTC, pero debe contar como junio.' },
+      { orden: 7, valorTexto: 'Esteban Paredes' },
     ],
   },
 ];
@@ -636,6 +660,7 @@ async function createEncuestaConRespuestas(params: {
     orden: number;
     valorBooleano?: boolean;
     valorTexto?: string;
+    valorNumero?: number;
   }>;
 }) {
   const preguntasPorOrden = new Map(params.preguntas.map((pregunta) => [pregunta.orden, pregunta]));
@@ -665,6 +690,10 @@ async function createEncuestaConRespuestas(params: {
             valorTexto:
               typeof respuestaSeed.valorTexto === 'string'
                 ? respuestaSeed.valorTexto
+                : null,
+            valorNumero:
+              typeof respuestaSeed.valorNumero === 'number'
+                ? respuestaSeed.valorNumero
                 : null,
           };
         }),
@@ -848,23 +877,18 @@ async function seedEncuestasDemoAreasReales(
 
     const respuestas = preguntas.map((pregunta) => {
       if (pregunta.tipo === TipoPregunta.SI_NO) {
-        return {
-          orden: pregunta.orden,
-          valorBooleano: true,
-        };
+        return { orden: pregunta.orden, valorBooleano: true };
+      }
+
+      if (pregunta.tipo === TipoPregunta.ESCALA_1_10) {
+        return { orden: pregunta.orden, valorNumero: 8 };
       }
 
       if (pregunta.tipo === TipoPregunta.NOMBRE_SOCIO) {
-        return {
-          orden: pregunta.orden,
-          valorTexto: encuestaSeed.nombreSocio,
-        };
+        return { orden: pregunta.orden, valorTexto: encuestaSeed.nombreSocio };
       }
 
-      return {
-        orden: pregunta.orden,
-        valorTexto: encuestaSeed.comentario,
-      };
+      return { orden: pregunta.orden, valorTexto: encuestaSeed.comentario };
     });
 
     await createEncuestaConRespuestas({

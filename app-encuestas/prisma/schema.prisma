@@ -10,6 +10,7 @@ enum TipoPregunta {
   SI_NO
   DESCRIPCION
   NOMBRE_SOCIO
+  ESCALA_1_10
 }
 
 enum RolUsuario {
@@ -114,6 +115,7 @@ model Respuesta {
 
   valorBooleano Boolean?
   valorTexto    String?  @db.Text
+  valorNumero   Int?
 
   createdAt DateTime @default(now())
 

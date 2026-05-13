@@ -65,6 +65,17 @@ export class EncuestasService {
         if (!respuesta) {
           throw new BadRequestException('La pregunta de nombre del socio es obligatoria');
         }
+      } else if (pregunta.tipo === TipoPregunta.ESCALA_1_10) {
+        if (!respuesta || respuesta.valorNumero === undefined || respuesta.valorNumero === null) {
+          throw new BadRequestException(
+            `La pregunta "${pregunta.texto}" requiere un valor entre 1 y 10`,
+          );
+        }
+        if (respuesta.valorNumero < 1 || respuesta.valorNumero > 10) {
+          throw new BadRequestException(
+            `La pregunta "${pregunta.texto}" requiere un valor entre 1 y 10`,
+          );
+        }
       }
     }
 
@@ -95,6 +106,7 @@ export class EncuestasService {
             preguntaId: r.preguntaId,
             valorBooleano: r.valorBooleano ?? null,
             valorTexto,
+            valorNumero: r.valorNumero ?? null,
           },
         });
       }
