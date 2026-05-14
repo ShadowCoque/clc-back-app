@@ -1,12 +1,8 @@
-import { IsOptional, IsInt, IsString, Min, Max } from 'class-validator';
+import { IsOptional, IsInt, Min, Max } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ResumenQueryDto } from './resumen-query.dto';
 
 export class EncuestasQueryDto extends ResumenQueryDto {
-  @IsOptional()
-  @IsString()
-  nombreSocio?: string;
-
   @IsOptional()
   @Type(() => Number)
   @IsInt()

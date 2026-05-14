@@ -19,4 +19,8 @@ export class ResumenQueryDto {
   @IsOptional()
   @IsString()
   fechaHasta?: string;
+
+  @IsOptional()
+  @IsString()
+  nombreSocio?: string;
 }

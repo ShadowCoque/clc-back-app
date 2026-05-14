@@ -119,7 +119,7 @@ export class ReportesService {
     }
   }
 
-  private buildWhere(q: EncuestasQueryDto): Prisma.EncuestaWhereInput {
+  private buildWhere(q: ResumenQueryDto): Prisma.EncuestaWhereInput {
     const where: Prisma.EncuestaWhereInput = {};
     if (q.areaId !== undefined) where.areaId = q.areaId;
     if (q.colaboradorId !== undefined) where.colaboradorId = q.colaboradorId;
@@ -148,74 +148,247 @@ export class ReportesService {
 
     const totalEncuestas = encuestas.length;
 
-    type AreaAccum = {
-      id: number; nombre: string; total: number;
-      preguntas: Map<number, { texto: string; si: number; no: number }>;
-      escalas: Map<number, { texto: string; valores: number[] }>;
-    };
-    type ColabAccum = { id: number; nombre: string; apellido: string; total: number };
+    // ── Acumuladores globales ─────────────────────────────────────────────
+    const allEscalaValores: number[] = [];
+    const allSiNo = { si: 0, no: 0 };
+    let totalComentarios = 0;
+    let escalaQuestion: { id: number; texto: string } | null = null;
 
+    // ── Por pregunta SI_NO ────────────────────────────────────────────────
+    type PregSiNoAccum = { id: number; texto: string; si: number; no: number };
+    const pregSiNoMap = new Map<number, PregSiNoAccum>();
+
+    // ── Por colaborador ───────────────────────────────────────────────────
+    type ColabAccum = {
+      colaboradorId: number; nombre: string; apellido: string;
+      areaId: number; areaNombre: string;
+      total: number; escalaValores: number[];
+      si: number; no: number; comentarios: number;
+    };
+    const colabMap = new Map<number, ColabAccum>();
+
+    // ── Por área (KPIs nuevos + legacy resumenPorArea) ─────────────────────
+    type AreaAccum = {
+      areaId: number; nombre: string;
+      total: number; escalaValores: number[];
+      si: number; no: number; comentarios: number;
+      preguntas: Map<number, { texto: string; si: number; no: number }>;
+      escalas:   Map<number, { texto: string; valores: number[] }>;
+    };
     const areaMap = new Map<number, AreaAccum>();
-    const colaboradorMap = new Map<number, ColabAccum>();
+
+    // ── Comentarios con escala ────────────────────────────────────────────
     const respuestasTexto: {
       fecha: string; hora: string; area: string;
-      colaborador: string | null; nombreSocio: string; texto: string;
+      colaborador: string | null; nombreSocio: string;
+      texto: string; escala: number | null; clasificacion: string;
     }[] = [];
 
+    // ── Loop principal ────────────────────────────────────────────────────
     for (const encuesta of encuestas) {
+      let escalaEncuesta: number | null = null;
+      for (const r of encuesta.respuestas) {
+        if (r.pregunta.tipo === TipoPregunta.ESCALA_1_10 && r.valorNumero != null) {
+          escalaEncuesta = r.valorNumero;
+          break;
+        }
+      }
+
       if (!areaMap.has(encuesta.areaId)) {
         areaMap.set(encuesta.areaId, {
-          id: encuesta.areaId, nombre: encuesta.area.nombre,
-          total: 0, preguntas: new Map(), escalas: new Map(),
+          areaId: encuesta.areaId, nombre: encuesta.area.nombre,
+          total: 0, escalaValores: [], si: 0, no: 0, comentarios: 0,
+          preguntas: new Map(), escalas: new Map(),
         });
       }
-      const areaData = areaMap.get(encuesta.areaId)!;
-      areaData.total++;
+      const areaAccum = areaMap.get(encuesta.areaId)!;
+      areaAccum.total++;
 
       if (encuesta.colaboradorId && encuesta.colaborador) {
-        if (!colaboradorMap.has(encuesta.colaboradorId)) {
-          colaboradorMap.set(encuesta.colaboradorId, {
-            id: encuesta.colaboradorId,
+        if (!colabMap.has(encuesta.colaboradorId)) {
+          colabMap.set(encuesta.colaboradorId, {
+            colaboradorId: encuesta.colaboradorId,
             nombre: encuesta.colaborador.nombre,
             apellido: encuesta.colaborador.apellido,
-            total: 0,
+            areaId: encuesta.areaId,
+            areaNombre: encuesta.area.nombre,
+            total: 0, escalaValores: [], si: 0, no: 0, comentarios: 0,
           });
         }
-        colaboradorMap.get(encuesta.colaboradorId)!.total++;
+        colabMap.get(encuesta.colaboradorId)!.total++;
       }
 
-      for (const respuesta of encuesta.respuestas) {
-        if (respuesta.pregunta.tipo === TipoPregunta.SI_NO) {
-          if (!areaData.preguntas.has(respuesta.preguntaId)) {
-            areaData.preguntas.set(respuesta.preguntaId, { texto: respuesta.pregunta.texto, si: 0, no: 0 });
+      for (const r of encuesta.respuestas) {
+        const tipo = r.pregunta.tipo;
+
+        if (tipo === TipoPregunta.SI_NO) {
+          if (!pregSiNoMap.has(r.preguntaId))
+            pregSiNoMap.set(r.preguntaId, { id: r.preguntaId, texto: r.pregunta.texto, si: 0, no: 0 });
+          if (!areaAccum.preguntas.has(r.preguntaId))
+            areaAccum.preguntas.set(r.preguntaId, { texto: r.pregunta.texto, si: 0, no: 0 });
+
+          if (r.valorBooleano === true) {
+            pregSiNoMap.get(r.preguntaId)!.si++;
+            areaAccum.preguntas.get(r.preguntaId)!.si++;
+            allSiNo.si++;
+            areaAccum.si++;
+            if (encuesta.colaboradorId) colabMap.get(encuesta.colaboradorId)!.si++;
+          } else if (r.valorBooleano === false) {
+            pregSiNoMap.get(r.preguntaId)!.no++;
+            areaAccum.preguntas.get(r.preguntaId)!.no++;
+            allSiNo.no++;
+            areaAccum.no++;
+            if (encuesta.colaboradorId) colabMap.get(encuesta.colaboradorId)!.no++;
           }
-          const pData = areaData.preguntas.get(respuesta.preguntaId)!;
-          if (respuesta.valorBooleano === true) pData.si++;
-          else if (respuesta.valorBooleano === false) pData.no++;
-        } else if (respuesta.pregunta.tipo === TipoPregunta.ESCALA_1_10) {
-          if (respuesta.valorNumero !== null && respuesta.valorNumero !== undefined) {
-            if (!areaData.escalas.has(respuesta.preguntaId)) {
-              areaData.escalas.set(respuesta.preguntaId, { texto: respuesta.pregunta.texto, valores: [] });
-            }
-            areaData.escalas.get(respuesta.preguntaId)!.valores.push(respuesta.valorNumero);
+
+        } else if (tipo === TipoPregunta.ESCALA_1_10 && r.valorNumero != null) {
+          if (!escalaQuestion) escalaQuestion = { id: r.preguntaId, texto: r.pregunta.texto };
+          if (!areaAccum.escalas.has(r.preguntaId))
+            areaAccum.escalas.set(r.preguntaId, { texto: r.pregunta.texto, valores: [] });
+          areaAccum.escalas.get(r.preguntaId)!.valores.push(r.valorNumero);
+          allEscalaValores.push(r.valorNumero);
+          areaAccum.escalaValores.push(r.valorNumero);
+          if (encuesta.colaboradorId) colabMap.get(encuesta.colaboradorId)!.escalaValores.push(r.valorNumero);
+
+        } else if (tipo === TipoPregunta.DESCRIPCION && r.valorTexto) {
+          totalComentarios++;
+          areaAccum.comentarios++;
+          if (encuesta.colaboradorId) colabMap.get(encuesta.colaboradorId)!.comentarios++;
+
+          let clasificacion = 'Sin escala';
+          if (escalaEncuesta !== null) {
+            if      (escalaEncuesta >= 9) clasificacion = 'Promotor';
+            else if (escalaEncuesta >= 7) clasificacion = 'Pasivo';
+            else                          clasificacion = 'Detractor';
           }
-        } else if (respuesta.pregunta.tipo === TipoPregunta.DESCRIPCION && respuesta.valorTexto) {
           respuestasTexto.push({
             fecha: formatFechaDia(encuesta.fechaDia),
-            hora: formatHoraEcuador(encuesta.fechaEnvio),
-            area: encuesta.area.nombre,
+            hora:  formatHoraEcuador(encuesta.fechaEnvio),
+            area:  encuesta.area.nombre,
             colaborador: encuesta.colaborador
               ? `${encuesta.colaborador.nombre} ${encuesta.colaborador.apellido}`.trim()
               : null,
             nombreSocio: encuesta.nombreSocio,
-            texto: respuesta.valorTexto,
+            texto:        r.valorTexto,
+            escala:       escalaEncuesta,
+            clasificacion,
           });
         }
       }
     }
 
+    // ── KPIs globales ─────────────────────────────────────────────────────
+    const totalEscala    = allEscalaValores.length;
+    const promedioEscala = totalEscala > 0
+      ? Math.round((allEscalaValores.reduce((a, b) => a + b, 0) / totalEscala) * 100) / 100
+      : null;
+    const siNoTotal            = allSiNo.si + allSiNo.no;
+    const porcentajeSatisfaccion = siNoTotal > 0
+      ? Math.round((allSiNo.si / siNoTotal) * 10000) / 100
+      : null;
+
+    // ── resumenEscala global ──────────────────────────────────────────────
+    type EscalaResumen = {
+      preguntaId: number | null; pregunta: string | null;
+      totalRespuestas: number; promedio: number | null;
+      minimo: number; maximo: number;
+      distribucion: Record<string, number>;
+      detractores: number; pasivos: number; promotores: number;
+      porcentajeDetractores: number; porcentajePromotores: number;
+      npsAproximado: number;
+    };
+    let nps: number | null = null;
+    let resumenEscala: EscalaResumen | null = null;
+
+    if (totalEscala > 0) {
+      const { promotores, pasivos, detractores, nps: npsVal } = calcNps(allEscalaValores, totalEscala);
+      nps = npsVal;
+      const distribucion: Record<string, number> = {};
+      for (let i = 1; i <= 10; i++) distribucion[String(i)] = 0;
+      for (const v of allEscalaValores) distribucion[String(v)] = (distribucion[String(v)] ?? 0) + 1;
+      resumenEscala = {
+        preguntaId: escalaQuestion?.id ?? null,
+        pregunta:   escalaQuestion?.texto ?? null,
+        totalRespuestas: totalEscala,
+        promedio:  promedioEscala,
+        minimo:    Math.min(...allEscalaValores),
+        maximo:    Math.max(...allEscalaValores),
+        distribucion,
+        detractores, pasivos, promotores,
+        porcentajeDetractores: pct(detractores, totalEscala),
+        porcentajePromotores:  pct(promotores,  totalEscala),
+        npsAproximado: npsVal,
+      };
+    }
+
+    // ── preguntasSiNo ─────────────────────────────────────────────────────
+    const preguntasSiNo = Array.from(pregSiNoMap.values()).map((p) => {
+      const total = p.si + p.no;
+      return {
+        preguntaId: p.id,
+        texto: p.texto,
+        totalSi: p.si,
+        totalNo: p.no,
+        total,
+        porcentajeSi:           pct(p.si, total),
+        porcentajeNo:           pct(p.no, total),
+        porcentajeSatisfaccion: pct(p.si, total),
+      };
+    });
+
+    // ── colaboradores ─────────────────────────────────────────────────────
+    const colaboradores = Array.from(colabMap.values()).map((c) => {
+      const nEsc    = c.escalaValores.length;
+      const promEsc = nEsc > 0
+        ? Math.round((c.escalaValores.reduce((a, b) => a + b, 0) / nEsc) * 100) / 100
+        : null;
+      const cSiNoTotal = c.si + c.no;
+      const cPctSat    = cSiNoTotal > 0
+        ? Math.round((c.si / cSiNoTotal) * 10000) / 100
+        : null;
+      const cStats = nEsc > 0 ? calcNps(c.escalaValores, nEsc) : null;
+      return {
+        colaboradorId:  c.colaboradorId,
+        nombre:         c.nombre,
+        apellido:       c.apellido,
+        areaId:         c.areaId,
+        areaNombre:     c.areaNombre,
+        totalEncuestas: c.total,
+        promedioEscala: promEsc,
+        nps:            cStats?.nps ?? null,
+        porcentajeSatisfaccion: cPctSat,
+        totalComentarios: c.comentarios,
+        promotores:  cStats?.promotores  ?? 0,
+        pasivos:     cStats?.pasivos     ?? 0,
+        detractores: cStats?.detractores ?? 0,
+      };
+    });
+
+    // ── areas ─────────────────────────────────────────────────────────────
+    const areas = Array.from(areaMap.values()).map((a) => {
+      const nEsc    = a.escalaValores.length;
+      const promEsc = nEsc > 0
+        ? Math.round((a.escalaValores.reduce((s, v) => s + v, 0) / nEsc) * 100) / 100
+        : null;
+      const aSiNoTotal = a.si + a.no;
+      const aPctSat    = aSiNoTotal > 0
+        ? Math.round((a.si / aSiNoTotal) * 10000) / 100
+        : null;
+      const aNps = nEsc > 0 ? calcNps(a.escalaValores, nEsc).nps : null;
+      return {
+        areaId:         a.areaId,
+        nombre:         a.nombre,
+        totalEncuestas: a.total,
+        promedioEscala: promEsc,
+        nps:            aNps,
+        porcentajeSatisfaccion: aPctSat,
+        totalComentarios: a.comentarios,
+      };
+    });
+
+    // ── resumenPorArea (legacy, para compatibilidad) ───────────────────────
     const resumenPorArea = Array.from(areaMap.values()).map((area) => ({
-      id: area.id, nombre: area.nombre, totalEncuestas: area.total,
+      id: area.areaId, nombre: area.nombre, totalEncuestas: area.total,
       preguntas: Array.from(area.preguntas.entries()).map(([id, p]) => {
         const total = p.si + p.no;
         return { id, texto: p.texto, si: p.si, no: p.no, total,
@@ -226,34 +399,40 @@ export class ReportesService {
         const totalRespuestas = valores.length;
         if (totalRespuestas === 0) {
           return { preguntaId: id, pregunta: e.texto, totalRespuestas: 0,
-            promedio: null, minimo: null, maximo: null, distribucion: {} as Record<number, number>,
+            promedio: null, minimo: null, maximo: null,
+            distribucion: {} as Record<number, number>,
             detractores: 0, pasivos: 0, promotores: 0,
             porcentajeDetractores: 0, porcentajePromotores: 0, npsAproximado: 0 };
         }
-        const suma = valores.reduce((acc, v) => acc + v, 0);
+        const suma     = valores.reduce((acc, v) => acc + v, 0);
         const promedio = Math.round((suma / totalRespuestas) * 100) / 100;
-        const minimo = Math.min(...valores);
-        const maximo = Math.max(...valores);
+        const minimo   = Math.min(...valores);
+        const maximo   = Math.max(...valores);
         const distribucion: Record<number, number> = {};
         for (let i = 1; i <= 10; i++) distribucion[i] = 0;
         for (const v of valores) distribucion[v] = (distribucion[v] ?? 0) + 1;
-        const detractores = valores.filter((v) => v <= 6).length;
-        const pasivos     = valores.filter((v) => v >= 7 && v <= 8).length;
-        const promotores  = valores.filter((v) => v >= 9).length;
-        const porcentajeDetractores = Math.round(pct(detractores, totalRespuestas));
-        const porcentajePromotores  = Math.round(pct(promotores, totalRespuestas));
-        const npsAproximado = porcentajePromotores - porcentajeDetractores;
+        const { promotores, pasivos, detractores, nps: npsArea } = calcNps(valores, totalRespuestas);
         return { preguntaId: id, pregunta: e.texto, totalRespuestas, promedio, minimo, maximo,
           distribucion, detractores, pasivos, promotores,
-          porcentajeDetractores, porcentajePromotores, npsAproximado };
+          porcentajeDetractores: Math.round(pct(detractores, totalRespuestas)),
+          porcentajePromotores:  Math.round(pct(promotores,  totalRespuestas)),
+          npsAproximado: npsArea };
       }),
     }));
 
-    const result: Record<string, unknown> = { totalEncuestas, resumenPorArea, respuestasTexto };
-    if (q.colaboradorId !== undefined) {
-      result.resumenPorColaborador = Array.from(colaboradorMap.values());
-    }
-    return result;
+    return {
+      totalEncuestas,
+      promedioEscala,
+      nps,
+      porcentajeSatisfaccion,
+      totalComentarios,
+      resumenEscala,
+      preguntasSiNo,
+      colaboradores,
+      areas,
+      respuestasTexto,
+      resumenPorArea,
+    };
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
