@@ -27,23 +27,30 @@ export class PreguntasController {
     return this.preguntasService.findByArea(areaId);
   }
 
+  @Get('admin/list')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RolUsuario.ADMIN)
+  findAllByAreaAdmin(@Query('areaId', ParseIntPipe) areaId: number) {
+    return this.preguntasService.findAllByAreaAdmin(areaId);
+  }
+
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(RolUsuario.ADMIN, RolUsuario.GERENTE)
+  @Roles(RolUsuario.ADMIN)
   create(@Body() dto: CreatePreguntaDto) {
     return this.preguntasService.create(dto);
   }
 
   @Patch(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(RolUsuario.ADMIN, RolUsuario.GERENTE)
+  @Roles(RolUsuario.ADMIN)
   update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdatePreguntaDto) {
     return this.preguntasService.update(id, dto);
   }
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(RolUsuario.ADMIN, RolUsuario.GERENTE)
+  @Roles(RolUsuario.ADMIN)
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.preguntasService.remove(id);
   }

@@ -29,7 +29,31 @@ export class PreguntasService {
     });
   }
 
+  findAllByAreaAdmin(areaId: number) {
+    return this.prisma.pregunta.findMany({
+      where: { areaId },
+      orderBy: { orden: 'asc' },
+      select: {
+        id: true,
+        areaId: true,
+        texto: true,
+        tipo: true,
+        orden: true,
+        obligatoria: true,
+        activa: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+  }
+
   async create(dto: CreatePreguntaDto) {
+    const duplicado = await this.prisma.pregunta.findFirst({
+      where: { areaId: dto.areaId, orden: dto.orden },
+      select: { id: true },
+    });
+    if (duplicado) throw new ConflictException(ORDEN_CONFLICT_MSG);
+
     try {
       return await this.prisma.pregunta.create({
         data: { ...dto, obligatoria: dto.obligatoria ?? true },
@@ -41,7 +65,27 @@ export class PreguntasService {
   }
 
   async update(id: number, dto: UpdatePreguntaDto) {
-    await this.findById(id);
+    const actual = await this.findById(id);
+
+    const dtoAreaId = (dto as { areaId?: number }).areaId;
+    const areaIdFinal = dtoAreaId ?? actual.areaId;
+    const ordenFinal = dto.orden ?? actual.orden;
+
+    const cambiaArea = dtoAreaId !== undefined && dtoAreaId !== actual.areaId;
+    const cambiaOrden = dto.orden !== undefined && dto.orden !== actual.orden;
+
+    if (cambiaArea || cambiaOrden) {
+      const conflicto = await this.prisma.pregunta.findFirst({
+        where: {
+          areaId: areaIdFinal,
+          orden: ordenFinal,
+          NOT: { id },
+        },
+        select: { id: true },
+      });
+      if (conflicto) throw new ConflictException(ORDEN_CONFLICT_MSG);
+    }
+
     try {
       return await this.prisma.pregunta.update({ where: { id }, data: dto });
     } catch (err) {

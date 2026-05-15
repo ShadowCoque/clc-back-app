@@ -29,14 +29,14 @@ export class ColaboradoresController {
 
   @Post()
   @UseGuards(RolesGuard)
-  @Roles(RolUsuario.ADMIN, RolUsuario.GERENTE)
+  @Roles(RolUsuario.ADMIN)
   create(@Body() dto: CreateColaboradorDto) {
     return this.colaboradoresService.create(dto);
   }
 
   @Patch(':id')
   @UseGuards(RolesGuard)
-  @Roles(RolUsuario.ADMIN, RolUsuario.GERENTE)
+  @Roles(RolUsuario.ADMIN)
   update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateColaboradorDto) {
     return this.colaboradoresService.update(id, dto);
   }

@@ -14,6 +14,22 @@ export class AreasService {
     });
   }
 
+  findAllAdmin() {
+    return this.prisma.area.findMany({
+      orderBy: { nombre: 'asc' },
+      select: {
+        id: true,
+        nombre: true,
+        slug: true,
+        descripcion: true,
+        imagenUrl: true,
+        activa: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+  }
+
   async findBySlug(slug: string) {
     const area = await this.prisma.area.findFirst({
       where: { slug, activa: true },

@@ -3,6 +3,9 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateColaboradorDto } from './dto/create-colaborador.dto';
 import { UpdateColaboradorDto } from './dto/update-colaborador.dto';
 
+const AREA_OBLIGATORIA_MSG = 'Debe seleccionar un área para el colaborador.';
+const AREA_NO_EXISTE_MSG = 'El área seleccionada no existe.';
+
 @Injectable()
 export class ColaboradoresService {
   constructor(private prisma: PrismaService) {}
@@ -16,17 +19,35 @@ export class ColaboradoresService {
   }
 
   async create(dto: CreateColaboradorDto) {
+    if (
+      dto.areaId === undefined ||
+      dto.areaId === null ||
+      !Number.isInteger(dto.areaId) ||
+      dto.areaId < 1
+    ) {
+      throw new BadRequestException(AREA_OBLIGATORIA_MSG);
+    }
     const area = await this.prisma.area.findUnique({ where: { id: dto.areaId } });
-    if (!area) throw new BadRequestException(`Área no encontrada: ${dto.areaId}`);
+    if (!area) throw new BadRequestException(AREA_NO_EXISTE_MSG);
     return this.prisma.colaborador.create({ data: dto });
   }
 
   async update(id: number, dto: UpdateColaboradorDto) {
     await this.findById(id);
-    if (dto.areaId !== undefined) {
+
+    if (Object.prototype.hasOwnProperty.call(dto, 'areaId')) {
+      if (
+        dto.areaId === null ||
+        dto.areaId === undefined ||
+        !Number.isInteger(dto.areaId) ||
+        dto.areaId < 1
+      ) {
+        throw new BadRequestException(AREA_OBLIGATORIA_MSG);
+      }
       const area = await this.prisma.area.findUnique({ where: { id: dto.areaId } });
-      if (!area) throw new BadRequestException(`Área no encontrada: ${dto.areaId}`);
+      if (!area) throw new BadRequestException(AREA_NO_EXISTE_MSG);
     }
+
     return this.prisma.colaborador.update({ where: { id }, data: dto });
   }
 
