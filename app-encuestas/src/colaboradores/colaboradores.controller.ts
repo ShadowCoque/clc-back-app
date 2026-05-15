@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Controller,
   Get,
   Post,
@@ -23,8 +24,16 @@ export class ColaboradoresController {
   constructor(private colaboradoresService: ColaboradoresService) {}
 
   @Get()
-  findByArea(@Query('areaId', ParseIntPipe) areaId: number) {
-    return this.colaboradoresService.findByArea(areaId);
+  findAll(@Query('areaId') areaIdRaw?: string) {
+    let areaId: number | undefined;
+    if (areaIdRaw !== undefined && areaIdRaw !== '') {
+      const parsed = Number(areaIdRaw);
+      if (!Number.isInteger(parsed) || parsed < 1) {
+        throw new BadRequestException('areaId debe ser un entero válido.');
+      }
+      areaId = parsed;
+    }
+    return this.colaboradoresService.findAll(areaId);
   }
 
   @Post()

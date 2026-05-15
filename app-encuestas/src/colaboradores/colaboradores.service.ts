@@ -10,11 +10,11 @@ const AREA_NO_EXISTE_MSG = 'El área seleccionada no existe.';
 export class ColaboradoresService {
   constructor(private prisma: PrismaService) {}
 
-  findByArea(areaId: number) {
+  findAll(areaId?: number) {
     return this.prisma.colaborador.findMany({
-      where: { areaId },
+      where: areaId !== undefined ? { areaId } : {},
       select: { id: true, nombre: true, apellido: true, activo: true, areaId: true },
-      orderBy: { nombre: 'asc' },
+      orderBy: [{ areaId: 'asc' }, { nombre: 'asc' }],
     });
   }
 

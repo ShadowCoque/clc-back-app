@@ -1,7 +1,12 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateAreaDto } from './dto/create-area.dto';
 import { UpdateAreaDto } from './dto/update-area.dto';
+
+const SIN_COLABORADORES_MSG =
+  'Esta área aún no está disponible porque no tiene colaboradores activos asignados.';
+const SIN_PREGUNTAS_MSG =
+  'Esta área aún no está disponible porque no tiene preguntas activas configuradas.';
 
 @Injectable()
 export class AreasService {
@@ -9,13 +14,17 @@ export class AreasService {
 
   findAll() {
     return this.prisma.area.findMany({
-      where: { activa: true },
+      where: {
+        activa: true,
+        colaboradores: { some: { activo: true } },
+        preguntas: { some: { activa: true } },
+      },
       select: { id: true, nombre: true, slug: true, descripcion: true, imagenUrl: true },
     });
   }
 
-  findAllAdmin() {
-    return this.prisma.area.findMany({
+  async findAllAdmin() {
+    const areas = await this.prisma.area.findMany({
       orderBy: { nombre: 'asc' },
       select: {
         id: true,
@@ -26,8 +35,20 @@ export class AreasService {
         activa: true,
         createdAt: true,
         updatedAt: true,
+        _count: {
+          select: {
+            colaboradores: { where: { activo: true } },
+            preguntas: { where: { activa: true } },
+          },
+        },
       },
     });
+
+    return areas.map(({ _count, ...rest }) => ({
+      ...rest,
+      totalColaboradoresActivos: _count.colaboradores,
+      totalPreguntasActivas: _count.preguntas,
+    }));
   }
 
   async findBySlug(slug: string) {
@@ -51,6 +72,14 @@ export class AreasService {
       },
     });
     if (!area) throw new NotFoundException(`Área no encontrada: ${slug}`);
+
+    if (area.colaboradores.length === 0) {
+      throw new BadRequestException(SIN_COLABORADORES_MSG);
+    }
+    if (area.preguntas.length === 0) {
+      throw new BadRequestException(SIN_PREGUNTAS_MSG);
+    }
+
     return area;
   }
 
