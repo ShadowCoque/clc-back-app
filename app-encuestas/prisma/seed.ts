@@ -51,6 +51,30 @@ function normalizeFullName(nombre: string, apellido?: string | null): string {
   return `${nombre} ${apellido ?? ''}`.trim().replace(/\s+/g, ' ');
 }
 
+// Para las áreas reales con estructura de 9 preguntas:
+// 1-3 SI_NO genéricas, 4 ESCALA_1_10, 5-7 SI_NO propias del área, 8 DESCRIPCION, 9 NOMBRE_SOCIO
+function makeRespuestasNueva(
+  siNoGenerico: [boolean, boolean, boolean],
+  escala: number,
+  siNoArea: [boolean, boolean, boolean],
+  comentario: string,
+  nombreSocio: string,
+): RespuestaSeed[] {
+  return [
+    { orden: 1, valorBooleano: siNoGenerico[0] },
+    { orden: 2, valorBooleano: siNoGenerico[1] },
+    { orden: 3, valorBooleano: siNoGenerico[2] },
+    { orden: 4, valorNumero: escala },
+    { orden: 5, valorBooleano: siNoArea[0] },
+    { orden: 6, valorBooleano: siNoArea[1] },
+    { orden: 7, valorBooleano: siNoArea[2] },
+    { orden: 8, valorTexto: comentario },
+    { orden: 9, valorTexto: nombreSocio },
+  ];
+}
+
+// Para el área ficticia Pruebas Reportes con estructura de 7 preguntas (se mantiene):
+// 1-4 SI_NO, 5 ESCALA_1_10, 6 DESCRIPCION, 7 NOMBRE_SOCIO
 function makeRespuestas(
   siNo: [boolean, boolean, boolean, boolean],
   escala: number,
@@ -107,43 +131,25 @@ const areasSeed = [
 
 // =======================================================
 // COLABORADORES BASE
+// activo=false: colaboradores pendientes de confirmar o reemplazar.
+// Se crean en la DB para mantener integridad histórica, pero no se muestran
+// públicamente hasta que sean reactivados desde el panel admin.
 // =======================================================
 
 const colaboradoresSeed = [
-  {
-    nombre: 'Aracely',
-    apellido: 'Frias',
-    areaSlug: 'alimentos-bebidas',
-  },
-  {
-    nombre: 'Silvia',
-    apellido: 'Medina',
-    areaSlug: 'area-comercial',
-  },
-  {
-    nombre: 'Viviana',
-    apellido: 'Anrango',
-    areaSlug: 'area-comercial',
-  },
-  {
-    nombre: 'Michelle',
-    apellido: 'Donoso',
-    areaSlug: 'area-socios',
-  },
-  {
-    nombre: 'Lorena',
-    apellido: 'Peralta',
-    areaSlug: 'areas-humedas',
-  },
-  {
-    nombre: 'Juan Carlos',
-    apellido: '',
-    areaSlug: 'cafeteria',
-  },
+  // Colaboradores activos confirmados
+  { nombre: 'Aracely', apellido: 'Frias', areaSlug: 'alimentos-bebidas', activo: true },
+  { nombre: 'Silvia', apellido: 'Medina', areaSlug: 'area-comercial', activo: true },
+  { nombre: 'Viviana', apellido: 'Anrango', areaSlug: 'area-comercial', activo: true },
+  { nombre: 'Michelle', apellido: 'Donoso', areaSlug: 'area-socios', activo: true },
+  // Colaboradores pendientes de confirmar — se dejan inactivos
+  { nombre: 'Lorena', apellido: 'Peralta', areaSlug: 'areas-humedas', activo: false },
+  { nombre: 'Juan Carlos', apellido: '', areaSlug: 'cafeteria', activo: false },
 ];
 
 // =======================================================
-// PREGUNTAS GENÉRICAS PARA ÁREAS REALES
+// PREGUNTAS GENÉRICAS (aplican a todas las áreas reales)
+// Posiciones: 1, 2, 3, 4, 8, 9
 // =======================================================
 
 const preguntasGenericasSeed = [
@@ -160,36 +166,65 @@ const preguntasGenericasSeed = [
     obligatoria: true,
   },
   {
-    texto: '¿El espacio o instalaciones estuvieron en buenas condiciones?',
+    texto: '¿Su experiencia general cumplió con sus expectativas?',
     tipo: TipoPregunta.SI_NO,
     orden: 3,
     obligatoria: true,
   },
   {
-    texto: '¿Su experiencia general cumplió con sus expectativas?',
-    tipo: TipoPregunta.SI_NO,
-    orden: 4,
-    obligatoria: true,
-  },
-  {
     texto: '¿Qué tan probable es que recomiende el club?',
     tipo: TipoPregunta.ESCALA_1_10,
-    orden: 5,
+    orden: 4,
     obligatoria: true,
   },
   {
     texto: 'Cuéntenos brevemente en qué podríamos mejorar o qué le agradó.',
     tipo: TipoPregunta.DESCRIPCION,
-    orden: 6,
+    orden: 8,
     obligatoria: false,
   },
   {
     texto: 'Nombres y apellidos del socio',
     tipo: TipoPregunta.NOMBRE_SOCIO,
-    orden: 7,
+    orden: 9,
     obligatoria: true,
   },
 ];
+
+// =======================================================
+// PREGUNTAS ESPECÍFICAS POR ÁREA (posiciones 5, 6, 7)
+// =======================================================
+
+const preguntasEspecificasPorAreaSeed: Record<
+  string,
+  Array<{ texto: string; orden: number; obligatoria: boolean }>
+> = {
+  'alimentos-bebidas': [
+    { texto: '¿La presentación de los alimentos o bebidas fue adecuada?', orden: 5, obligatoria: true },
+    { texto: '¿El tiempo de atención fue razonable?', orden: 6, obligatoria: true },
+    { texto: '¿El espacio de atención se encontró limpio y ordenado?', orden: 7, obligatoria: true },
+  ],
+  'area-comercial': [
+    { texto: '¿La información recibida fue clara y completa?', orden: 5, obligatoria: true },
+    { texto: '¿El trámite o requerimiento fue gestionado con agilidad?', orden: 6, obligatoria: true },
+    { texto: '¿Recibió seguimiento adecuado a su solicitud?', orden: 7, obligatoria: true },
+  ],
+  'area-socios': [
+    { texto: '¿La información sobre su cuenta o requerimiento fue clara?', orden: 5, obligatoria: true },
+    { texto: '¿La gestión realizada por el área fue eficiente?', orden: 6, obligatoria: true },
+    { texto: '¿Recibió una atención personalizada y respetuosa?', orden: 7, obligatoria: true },
+  ],
+  'cafeteria': [
+    { texto: '¿Los productos recibidos fueron de buena calidad?', orden: 5, obligatoria: true },
+    { texto: '¿El tiempo de entrega fue adecuado?', orden: 6, obligatoria: true },
+    { texto: '¿El espacio de cafetería se encontró limpio y ordenado?', orden: 7, obligatoria: true },
+  ],
+  'areas-humedas': [
+    { texto: '¿Las instalaciones se encontraron limpias y en buen estado?', orden: 5, obligatoria: true },
+    { texto: '¿La temperatura y funcionamiento de los servicios fue adecuado?', orden: 6, obligatoria: true },
+    { texto: '¿Percibió orden y seguridad durante el uso del área?', orden: 7, obligatoria: true },
+  ],
+};
 
 // =======================================================
 // USUARIOS INICIALES
@@ -228,75 +263,31 @@ const areaPruebasReportesSeed = {
 };
 
 const colaboradoresPruebasReportesSeed = [
-  {
-    nombre: 'Ana',
-    apellido: 'Reporter',
-  },
-  {
-    nombre: 'Luis',
-    apellido: 'Filtro',
-  },
-  {
-    nombre: 'Carla',
-    apellido: 'Excel',
-  },
-  {
-    nombre: 'Diego',
-    apellido: 'Validacion',
-  },
+  { nombre: 'Ana', apellido: 'Reporter' },
+  { nombre: 'Luis', apellido: 'Filtro' },
+  { nombre: 'Carla', apellido: 'Excel' },
+  { nombre: 'Diego', apellido: 'Validacion' },
 ];
 
+// Pruebas Reportes mantiene la estructura anterior de 7 preguntas (4 SI_NO + ESCALA + DESCRIPCION + NOMBRE_SOCIO)
 const preguntasPruebasReportesSeed = [
-  {
-    texto: '¿La atención fue cordial?',
-    tipo: TipoPregunta.SI_NO,
-    orden: 1,
-    obligatoria: true,
-  },
-  {
-    texto: '¿El requerimiento fue resuelto?',
-    tipo: TipoPregunta.SI_NO,
-    orden: 2,
-    obligatoria: true,
-  },
-  {
-    texto: '¿El tiempo de atención fue adecuado?',
-    tipo: TipoPregunta.SI_NO,
-    orden: 3,
-    obligatoria: true,
-  },
-  {
-    texto: '¿Recomendaría este servicio?',
-    tipo: TipoPregunta.SI_NO,
-    orden: 4,
-    obligatoria: true,
-  },
-  {
-    texto: '¿Qué tan probable es que recomiende el club?',
-    tipo: TipoPregunta.ESCALA_1_10,
-    orden: 5,
-    obligatoria: true,
-  },
-  {
-    texto: 'Comentario de prueba para reportes',
-    tipo: TipoPregunta.DESCRIPCION,
-    orden: 6,
-    obligatoria: false,
-  },
-  {
-    texto: 'Nombres y apellidos del socio',
-    tipo: TipoPregunta.NOMBRE_SOCIO,
-    orden: 7,
-    obligatoria: true,
-  },
+  { texto: '¿La atención fue cordial?', tipo: TipoPregunta.SI_NO, orden: 1, obligatoria: true },
+  { texto: '¿El requerimiento fue resuelto?', tipo: TipoPregunta.SI_NO, orden: 2, obligatoria: true },
+  { texto: '¿El tiempo de atención fue adecuado?', tipo: TipoPregunta.SI_NO, orden: 3, obligatoria: true },
+  { texto: '¿Recomendaría este servicio?', tipo: TipoPregunta.SI_NO, orden: 4, obligatoria: true },
+  { texto: '¿Qué tan probable es que recomiende el club?', tipo: TipoPregunta.ESCALA_1_10, orden: 5, obligatoria: true },
+  { texto: 'Comentario de prueba para reportes', tipo: TipoPregunta.DESCRIPCION, orden: 6, obligatoria: false },
+  { texto: 'Nombres y apellidos del socio', tipo: TipoPregunta.NOMBRE_SOCIO, orden: 7, obligatoria: true },
 ];
 
 // =======================================================
 // ENCUESTAS CONTROLADAS EN ÁREAS REALES
 // Rango: 2026-04-01 a 2026-05-13
+// Estructura: 9 preguntas por encuesta (3 SI_NO genérico + ESCALA + 3 SI_NO área + DESCRIPCION + NOMBRE_SOCIO)
 // =======================================================
 
 const encuestasControladasAreasRealesSeed: EncuestaAreaRealSeed[] = [
+  // ── Alimentos y Bebidas ───────────────────────────────────────────────────
   {
     areaSlug: 'alimentos-bebidas',
     nombreSocio: 'Carlos Andrade',
@@ -304,7 +295,11 @@ const encuestasControladasAreasRealesSeed: EncuestaAreaRealSeed[] = [
     ipAddress: '172.20.10.1',
     fechaEnvio: new Date('2026-04-01T09:05:00-05:00'),
     fechaDia: '2026-04-01',
-    respuestas: makeRespuestas([true, true, true, true], 9, 'Buena atención en restaurante, servicio rápido.', 'Carlos Andrade'),
+    respuestas: makeRespuestasNueva(
+      [true, true, true], 9,
+      [true, true, true],
+      'Buena atención en restaurante, servicio rápido.', 'Carlos Andrade',
+    ),
   },
   {
     areaSlug: 'alimentos-bebidas',
@@ -313,7 +308,11 @@ const encuestasControladasAreasRealesSeed: EncuestaAreaRealSeed[] = [
     ipAddress: '172.20.10.2',
     fechaEnvio: new Date('2026-04-04T12:20:00-05:00'),
     fechaDia: '2026-04-04',
-    respuestas: makeRespuestas([true, true, true, false], 8, 'La atención fue buena, pero el tiempo de espera puede mejorar.', 'María López'),
+    respuestas: makeRespuestasNueva(
+      [true, true, false], 8,
+      [true, false, true],
+      'La atención fue buena, pero el tiempo de espera puede mejorar.', 'María López',
+    ),
   },
   {
     areaSlug: 'alimentos-bebidas',
@@ -322,7 +321,11 @@ const encuestasControladasAreasRealesSeed: EncuestaAreaRealSeed[] = [
     ipAddress: '172.20.10.3',
     fechaEnvio: new Date('2026-04-12T13:10:00-05:00'),
     fechaDia: '2026-04-12',
-    respuestas: makeRespuestas([true, false, true, false], 6, 'El pedido llegó incompleto y se corrigió después.', 'Jorge Cevallos'),
+    respuestas: makeRespuestasNueva(
+      [true, false, false], 6,
+      [false, false, true],
+      'El pedido llegó incompleto y se corrigió después.', 'Jorge Cevallos',
+    ),
   },
   {
     areaSlug: 'alimentos-bebidas',
@@ -331,7 +334,11 @@ const encuestasControladasAreasRealesSeed: EncuestaAreaRealSeed[] = [
     ipAddress: '172.20.10.4',
     fechaEnvio: new Date('2026-04-22T15:35:00-05:00'),
     fechaDia: '2026-04-22',
-    respuestas: makeRespuestas([true, true, true, true], 10, 'Excelente servicio y trato del personal.', 'Ana Beltrán'),
+    respuestas: makeRespuestasNueva(
+      [true, true, true], 10,
+      [true, true, true],
+      'Excelente servicio y trato del personal.', 'Ana Beltrán',
+    ),
   },
   {
     areaSlug: 'alimentos-bebidas',
@@ -340,7 +347,11 @@ const encuestasControladasAreasRealesSeed: EncuestaAreaRealSeed[] = [
     ipAddress: '172.20.10.5',
     fechaEnvio: new Date('2026-05-03T10:45:00-05:00'),
     fechaDia: '2026-05-03',
-    respuestas: makeRespuestas([true, true, false, true], 7, 'La atención fue cordial, faltó limpieza en una mesa.', 'Gabriela Moncayo'),
+    respuestas: makeRespuestasNueva(
+      [true, true, true], 7,
+      [true, true, false],
+      'La atención fue cordial, faltó limpieza en una mesa.', 'Gabriela Moncayo',
+    ),
   },
   {
     areaSlug: 'alimentos-bebidas',
@@ -349,8 +360,13 @@ const encuestasControladasAreasRealesSeed: EncuestaAreaRealSeed[] = [
     ipAddress: '172.20.10.6',
     fechaEnvio: new Date('2026-05-13T16:15:00-05:00'),
     fechaDia: '2026-05-13',
-    respuestas: makeRespuestas([false, false, true, false], 5, 'La experiencia no cumplió con lo esperado.', 'Patricia Molina'),
+    respuestas: makeRespuestasNueva(
+      [false, false, false], 5,
+      [false, false, true],
+      'La experiencia no cumplió con lo esperado.', 'Patricia Molina',
+    ),
   },
+  // ── Área Comercial – Silvia Medina ────────────────────────────────────────
   {
     areaSlug: 'area-comercial',
     nombreSocio: 'Carlos Andrade',
@@ -358,7 +374,11 @@ const encuestasControladasAreasRealesSeed: EncuestaAreaRealSeed[] = [
     ipAddress: '172.20.20.1',
     fechaEnvio: new Date('2026-04-02T09:40:00-05:00'),
     fechaDia: '2026-04-02',
-    respuestas: makeRespuestas([true, true, true, true], 10, 'Información comercial clara y completa.', 'Carlos Andrade'),
+    respuestas: makeRespuestasNueva(
+      [true, true, true], 10,
+      [true, true, true],
+      'Información comercial clara y completa.', 'Carlos Andrade',
+    ),
   },
   {
     areaSlug: 'area-comercial',
@@ -367,7 +387,11 @@ const encuestasControladasAreasRealesSeed: EncuestaAreaRealSeed[] = [
     ipAddress: '172.20.20.2',
     fechaEnvio: new Date('2026-04-08T11:05:00-05:00'),
     fechaDia: '2026-04-08',
-    respuestas: makeRespuestas([true, true, true, false], 9, 'Muy buena atención, aunque faltó cerrar un detalle.', 'Roberto Castillo'),
+    respuestas: makeRespuestasNueva(
+      [true, true, false], 9,
+      [true, true, true],
+      'Muy buena atención, aunque faltó cerrar un detalle.', 'Roberto Castillo',
+    ),
   },
   {
     areaSlug: 'area-comercial',
@@ -376,7 +400,11 @@ const encuestasControladasAreasRealesSeed: EncuestaAreaRealSeed[] = [
     ipAddress: '172.20.20.3',
     fechaEnvio: new Date('2026-05-01T14:30:00-05:00'),
     fechaDia: '2026-05-01',
-    respuestas: makeRespuestas([true, true, false, true], 8, 'Atención cordial, pero el espacio estaba congestionado.', 'Fernanda Ruiz'),
+    respuestas: makeRespuestasNueva(
+      [true, true, true], 8,
+      [true, true, false],
+      'Atención cordial, pero el espacio estaba congestionado.', 'Fernanda Ruiz',
+    ),
   },
   {
     areaSlug: 'area-comercial',
@@ -385,8 +413,13 @@ const encuestasControladasAreasRealesSeed: EncuestaAreaRealSeed[] = [
     ipAddress: '172.20.20.4',
     fechaEnvio: new Date('2026-05-12T15:55:00-05:00'),
     fechaDia: '2026-05-12',
-    respuestas: makeRespuestas([false, true, false, false], 6, 'La respuesta fue útil, pero tardía.', 'Esteban Paredes'),
+    respuestas: makeRespuestasNueva(
+      [false, true, false], 6,
+      [true, false, false],
+      'La respuesta fue útil, pero tardía.', 'Esteban Paredes',
+    ),
   },
+  // ── Área Comercial – Viviana Anrango ──────────────────────────────────────
   {
     areaSlug: 'area-comercial',
     nombreSocio: 'María López',
@@ -394,7 +427,11 @@ const encuestasControladasAreasRealesSeed: EncuestaAreaRealSeed[] = [
     ipAddress: '172.20.20.5',
     fechaEnvio: new Date('2026-04-05T10:15:00-05:00'),
     fechaDia: '2026-04-05',
-    respuestas: makeRespuestas([true, false, true, true], 7, 'Buena orientación, faltó resolver una inquietud.', 'María López'),
+    respuestas: makeRespuestasNueva(
+      [true, false, true], 7,
+      [true, false, true],
+      'Buena orientación, faltó resolver una inquietud.', 'María López',
+    ),
   },
   {
     areaSlug: 'area-comercial',
@@ -403,7 +440,11 @@ const encuestasControladasAreasRealesSeed: EncuestaAreaRealSeed[] = [
     ipAddress: '172.20.20.6',
     fechaEnvio: new Date('2026-04-18T12:45:00-05:00'),
     fechaDia: '2026-04-18',
-    respuestas: makeRespuestas([true, true, true, true], 10, 'Excelente acompañamiento comercial.', 'Valeria Castro'),
+    respuestas: makeRespuestasNueva(
+      [true, true, true], 10,
+      [true, true, true],
+      'Excelente acompañamiento comercial.', 'Valeria Castro',
+    ),
   },
   {
     areaSlug: 'area-comercial',
@@ -412,7 +453,11 @@ const encuestasControladasAreasRealesSeed: EncuestaAreaRealSeed[] = [
     ipAddress: '172.20.20.7',
     fechaEnvio: new Date('2026-05-06T09:25:00-05:00'),
     fechaDia: '2026-05-06',
-    respuestas: makeRespuestas([true, true, false, true], 9, 'Atención muy buena y seguimiento oportuno.', 'Andrés Salazar'),
+    respuestas: makeRespuestasNueva(
+      [true, true, false], 9,
+      [true, true, true],
+      'Atención muy buena y seguimiento oportuno.', 'Andrés Salazar',
+    ),
   },
   {
     areaSlug: 'area-comercial',
@@ -421,8 +466,13 @@ const encuestasControladasAreasRealesSeed: EncuestaAreaRealSeed[] = [
     ipAddress: '172.20.20.8',
     fechaEnvio: new Date('2026-05-13T17:00:00-05:00'),
     fechaDia: '2026-05-13',
-    respuestas: makeRespuestas([false, false, false, false], 4, 'No recibí la información solicitada a tiempo.', 'Daniela Torres'),
+    respuestas: makeRespuestasNueva(
+      [false, false, false], 4,
+      [false, false, false],
+      'No recibí la información solicitada a tiempo.', 'Daniela Torres',
+    ),
   },
+  // ── Área de Socios – Michelle Donoso ──────────────────────────────────────
   {
     areaSlug: 'area-socios',
     nombreSocio: 'Gabriela Moncayo',
@@ -430,7 +480,11 @@ const encuestasControladasAreasRealesSeed: EncuestaAreaRealSeed[] = [
     ipAddress: '172.20.30.1',
     fechaEnvio: new Date('2026-04-03T08:50:00-05:00'),
     fechaDia: '2026-04-03',
-    respuestas: makeRespuestas([true, true, true, true], 8, 'Gestión adecuada de la solicitud.', 'Gabriela Moncayo'),
+    respuestas: makeRespuestasNueva(
+      [true, true, true], 8,
+      [true, true, true],
+      'Gestión adecuada de la solicitud.', 'Gabriela Moncayo',
+    ),
   },
   {
     areaSlug: 'area-socios',
@@ -439,7 +493,11 @@ const encuestasControladasAreasRealesSeed: EncuestaAreaRealSeed[] = [
     ipAddress: '172.20.30.2',
     fechaEnvio: new Date('2026-04-10T16:20:00-05:00'),
     fechaDia: '2026-04-10',
-    respuestas: makeRespuestas([true, true, true, false], 9, 'Muy buena atención, faltó confirmar por correo.', 'Patricia Molina'),
+    respuestas: makeRespuestasNueva(
+      [true, true, false], 9,
+      [true, true, true],
+      'Muy buena atención, faltó confirmar por correo.', 'Patricia Molina',
+    ),
   },
   {
     areaSlug: 'area-socios',
@@ -448,7 +506,11 @@ const encuestasControladasAreasRealesSeed: EncuestaAreaRealSeed[] = [
     ipAddress: '172.20.30.3',
     fechaEnvio: new Date('2026-04-28T10:30:00-05:00'),
     fechaDia: '2026-04-28',
-    respuestas: makeRespuestas([true, false, true, true], 7, 'Atención correcta, pero la resolución demoró.', 'Carlos Andrade'),
+    respuestas: makeRespuestasNueva(
+      [true, false, true], 7,
+      [true, false, true],
+      'Atención correcta, pero la resolución demoró.', 'Carlos Andrade',
+    ),
   },
   {
     areaSlug: 'area-socios',
@@ -457,7 +519,11 @@ const encuestasControladasAreasRealesSeed: EncuestaAreaRealSeed[] = [
     ipAddress: '172.20.30.4',
     fechaEnvio: new Date('2026-05-04T13:40:00-05:00'),
     fechaDia: '2026-05-04',
-    respuestas: makeRespuestas([false, false, true, false], 5, 'No quedó claro el proceso para el trámite.', 'Jorge Cevallos'),
+    respuestas: makeRespuestasNueva(
+      [false, false, true], 5,
+      [false, false, true],
+      'No quedó claro el proceso para el trámite.', 'Jorge Cevallos',
+    ),
   },
   {
     areaSlug: 'area-socios',
@@ -466,8 +532,13 @@ const encuestasControladasAreasRealesSeed: EncuestaAreaRealSeed[] = [
     ipAddress: '172.20.30.5',
     fechaEnvio: new Date('2026-05-11T11:35:00-05:00'),
     fechaDia: '2026-05-11',
-    respuestas: makeRespuestas([true, true, true, true], 10, 'Excelente atención y seguimiento.', 'María López'),
+    respuestas: makeRespuestasNueva(
+      [true, true, true], 10,
+      [true, true, true],
+      'Excelente atención y seguimiento.', 'María López',
+    ),
   },
+  // ── Áreas Húmedas – Lorena Peralta (inactiva, datos históricos) ───────────
   {
     areaSlug: 'areas-humedas',
     nombreSocio: 'Andrés Salazar',
@@ -475,7 +546,11 @@ const encuestasControladasAreasRealesSeed: EncuestaAreaRealSeed[] = [
     ipAddress: '172.20.40.1',
     fechaEnvio: new Date('2026-04-06T07:40:00-05:00'),
     fechaDia: '2026-04-06',
-    respuestas: makeRespuestas([false, true, false, true], 6, 'La zona estuvo habilitada, pero faltó limpieza.', 'Andrés Salazar'),
+    respuestas: makeRespuestasNueva(
+      [false, true, true], 6,
+      [false, true, false],
+      'La zona estuvo habilitada, pero faltó limpieza.', 'Andrés Salazar',
+    ),
   },
   {
     areaSlug: 'areas-humedas',
@@ -484,7 +559,11 @@ const encuestasControladasAreasRealesSeed: EncuestaAreaRealSeed[] = [
     ipAddress: '172.20.40.2',
     fechaEnvio: new Date('2026-04-15T08:25:00-05:00'),
     fechaDia: '2026-04-15',
-    respuestas: makeRespuestas([true, true, true, false], 7, 'El servicio fue bueno, pero la temperatura no fue la esperada.', 'Daniela Torres'),
+    respuestas: makeRespuestasNueva(
+      [true, true, false], 7,
+      [true, false, true],
+      'El servicio fue bueno, pero la temperatura no fue la esperada.', 'Daniela Torres',
+    ),
   },
   {
     areaSlug: 'areas-humedas',
@@ -493,7 +572,11 @@ const encuestasControladasAreasRealesSeed: EncuestaAreaRealSeed[] = [
     ipAddress: '172.20.40.3',
     fechaEnvio: new Date('2026-04-30T09:10:00-05:00'),
     fechaDia: '2026-04-30',
-    respuestas: makeRespuestas([true, true, false, true], 8, 'Atención cordial y servicio estable.', 'Roberto Castillo'),
+    respuestas: makeRespuestasNueva(
+      [true, true, false], 8,
+      [true, true, true],
+      'Atención cordial y servicio estable.', 'Roberto Castillo',
+    ),
   },
   {
     areaSlug: 'areas-humedas',
@@ -502,7 +585,11 @@ const encuestasControladasAreasRealesSeed: EncuestaAreaRealSeed[] = [
     ipAddress: '172.20.40.4',
     fechaEnvio: new Date('2026-05-08T10:00:00-05:00'),
     fechaDia: '2026-05-08',
-    respuestas: makeRespuestas([true, true, true, true], 9, 'Excelente estado de las instalaciones.', 'Fernanda Ruiz'),
+    respuestas: makeRespuestasNueva(
+      [true, true, true], 9,
+      [true, true, true],
+      'Excelente estado de las instalaciones.', 'Fernanda Ruiz',
+    ),
   },
   {
     areaSlug: 'areas-humedas',
@@ -511,8 +598,13 @@ const encuestasControladasAreasRealesSeed: EncuestaAreaRealSeed[] = [
     ipAddress: '172.20.40.5',
     fechaEnvio: new Date('2026-05-13T12:20:00-05:00'),
     fechaDia: '2026-05-13',
-    respuestas: makeRespuestas([true, true, true, true], 10, 'Muy buena experiencia en piscina y sauna.', 'Carlos Andrade'),
+    respuestas: makeRespuestasNueva(
+      [true, true, true], 10,
+      [true, true, true],
+      'Muy buena experiencia en piscina y sauna.', 'Carlos Andrade',
+    ),
   },
+  // ── Cafetería – Juan Carlos (inactivo, datos históricos) ─────────────────
   {
     areaSlug: 'cafeteria',
     nombreSocio: 'Valeria Castro',
@@ -520,7 +612,11 @@ const encuestasControladasAreasRealesSeed: EncuestaAreaRealSeed[] = [
     ipAddress: '172.20.50.1',
     fechaEnvio: new Date('2026-04-01T16:40:00-05:00'),
     fechaDia: '2026-04-01',
-    respuestas: makeRespuestas([true, true, true, true], 10, 'Café y atención excelentes.', 'Valeria Castro'),
+    respuestas: makeRespuestasNueva(
+      [true, true, true], 10,
+      [true, true, true],
+      'Café y atención excelentes.', 'Valeria Castro',
+    ),
   },
   {
     areaSlug: 'cafeteria',
@@ -529,7 +625,11 @@ const encuestasControladasAreasRealesSeed: EncuestaAreaRealSeed[] = [
     ipAddress: '172.20.50.2',
     fechaEnvio: new Date('2026-04-07T17:15:00-05:00'),
     fechaDia: '2026-04-07',
-    respuestas: makeRespuestas([true, true, true, true], 9, 'Muy buena atención en caja y entrega.', 'Ana Beltrán'),
+    respuestas: makeRespuestasNueva(
+      [true, true, true], 9,
+      [true, true, true],
+      'Muy buena atención en caja y entrega.', 'Ana Beltrán',
+    ),
   },
   {
     areaSlug: 'cafeteria',
@@ -538,7 +638,11 @@ const encuestasControladasAreasRealesSeed: EncuestaAreaRealSeed[] = [
     ipAddress: '172.20.50.3',
     fechaEnvio: new Date('2026-04-16T18:00:00-05:00'),
     fechaDia: '2026-04-16',
-    respuestas: makeRespuestas([true, false, true, true], 8, 'Servicio bueno, faltó variedad disponible.', 'Jorge Cevallos'),
+    respuestas: makeRespuestasNueva(
+      [true, false, true], 8,
+      [true, true, true],
+      'Servicio bueno, faltó variedad disponible.', 'Jorge Cevallos',
+    ),
   },
   {
     areaSlug: 'cafeteria',
@@ -547,7 +651,11 @@ const encuestasControladasAreasRealesSeed: EncuestaAreaRealSeed[] = [
     ipAddress: '172.20.50.4',
     fechaEnvio: new Date('2026-04-25T15:30:00-05:00'),
     fechaDia: '2026-04-25',
-    respuestas: makeRespuestas([true, true, false, true], 7, 'Buena atención, pero el área estaba llena.', 'María López'),
+    respuestas: makeRespuestasNueva(
+      [true, true, true], 7,
+      [true, true, false],
+      'Buena atención, pero el área estaba llena.', 'María López',
+    ),
   },
   {
     areaSlug: 'cafeteria',
@@ -556,7 +664,11 @@ const encuestasControladasAreasRealesSeed: EncuestaAreaRealSeed[] = [
     ipAddress: '172.20.50.5',
     fechaEnvio: new Date('2026-05-02T11:50:00-05:00'),
     fechaDia: '2026-05-02',
-    respuestas: makeRespuestas([false, true, false, false], 6, 'El producto estuvo bien, pero la atención fue lenta.', 'Patricia Molina'),
+    respuestas: makeRespuestasNueva(
+      [false, true, false], 6,
+      [true, false, false],
+      'El producto estuvo bien, pero la atención fue lenta.', 'Patricia Molina',
+    ),
   },
   {
     areaSlug: 'cafeteria',
@@ -565,7 +677,11 @@ const encuestasControladasAreasRealesSeed: EncuestaAreaRealSeed[] = [
     ipAddress: '172.20.50.6',
     fechaEnvio: new Date('2026-05-07T12:10:00-05:00'),
     fechaDia: '2026-05-07',
-    respuestas: makeRespuestas([true, true, true, false], 8, 'Atención cordial, faltó confirmar disponibilidad.', 'Gabriela Moncayo'),
+    respuestas: makeRespuestasNueva(
+      [true, true, false], 8,
+      [true, true, true],
+      'Atención cordial, faltó confirmar disponibilidad.', 'Gabriela Moncayo',
+    ),
   },
   {
     areaSlug: 'cafeteria',
@@ -574,7 +690,11 @@ const encuestasControladasAreasRealesSeed: EncuestaAreaRealSeed[] = [
     ipAddress: '172.20.50.7',
     fechaEnvio: new Date('2026-05-10T13:15:00-05:00'),
     fechaDia: '2026-05-10',
-    respuestas: makeRespuestas([true, true, true, true], 9, 'Servicio rápido y amable.', 'Esteban Paredes'),
+    respuestas: makeRespuestasNueva(
+      [true, true, true], 9,
+      [true, true, true],
+      'Servicio rápido y amable.', 'Esteban Paredes',
+    ),
   },
   {
     areaSlug: 'cafeteria',
@@ -583,13 +703,18 @@ const encuestasControladasAreasRealesSeed: EncuestaAreaRealSeed[] = [
     ipAddress: '172.20.50.8',
     fechaEnvio: new Date('2026-05-13T17:35:00-05:00'),
     fechaDia: '2026-05-13',
-    respuestas: makeRespuestas([true, true, true, true], 10, 'Excelente experiencia en cafetería.', 'Roberto Castillo'),
+    respuestas: makeRespuestasNueva(
+      [true, true, true], 10,
+      [true, true, true],
+      'Excelente experiencia en cafetería.', 'Roberto Castillo',
+    ),
   },
 ];
 
 // =======================================================
 // ENCUESTAS CONTROLADAS PARA PRUEBAS REPORTES
 // Rango: 2026-04-01 a 2026-05-13
+// Mantienen estructura de 7 preguntas (4 SI_NO + ESCALA + DESCRIPCION + NOMBRE_SOCIO)
 // =======================================================
 
 const encuestasPruebasReportesSeed: EncuestaPruebasSeed[] = [
@@ -732,9 +857,7 @@ async function seedAreas() {
 
   for (const area of areasSeed) {
     const areaCreada = await prisma.area.upsert({
-      where: {
-        slug: area.slug,
-      },
+      where: { slug: area.slug },
       update: {
         nombre: area.nombre,
         descripcion: area.descripcion,
@@ -748,11 +871,7 @@ async function seedAreas() {
         imagenUrl: area.imagenUrl,
         activa: true,
       },
-      select: {
-        id: true,
-        nombre: true,
-        slug: true,
-      },
+      select: { id: true, nombre: true, slug: true },
     });
 
     areasMap.set(areaCreada.slug, areaCreada);
@@ -781,12 +900,8 @@ async function seedColaboradores(
 
     if (colaboradorExistente) {
       await prisma.colaborador.update({
-        where: {
-          id: colaboradorExistente.id,
-        },
-        data: {
-          activo: true,
-        },
+        where: { id: colaboradorExistente.id },
+        data: { activo: colaborador.activo },
       });
     } else {
       await prisma.colaborador.create({
@@ -794,7 +909,7 @@ async function seedColaboradores(
           nombre: colaborador.nombre,
           apellido: colaborador.apellido,
           areaId: area.id,
-          activo: true,
+          activo: colaborador.activo,
         },
       });
     }
@@ -805,14 +920,10 @@ async function seedPreguntas(
   areasMap: Map<string, { id: number; nombre: string; slug: string }>,
 ) {
   for (const area of areasMap.values()) {
+    // Preguntas genéricas (posiciones 1, 2, 3, 4, 8, 9)
     for (const pregunta of preguntasGenericasSeed) {
       await prisma.pregunta.upsert({
-        where: {
-          areaId_orden: {
-            areaId: area.id,
-            orden: pregunta.orden,
-          },
-        },
+        where: { areaId_orden: { areaId: area.id, orden: pregunta.orden } },
         update: {
           texto: pregunta.texto,
           tipo: pregunta.tipo,
@@ -829,6 +940,30 @@ async function seedPreguntas(
         },
       });
     }
+
+    // Preguntas propias del área (posiciones 5, 6, 7)
+    const especificas = preguntasEspecificasPorAreaSeed[area.slug];
+    if (especificas) {
+      for (const pregunta of especificas) {
+        await prisma.pregunta.upsert({
+          where: { areaId_orden: { areaId: area.id, orden: pregunta.orden } },
+          update: {
+            texto: pregunta.texto,
+            tipo: TipoPregunta.SI_NO,
+            obligatoria: pregunta.obligatoria,
+            activa: true,
+          },
+          create: {
+            areaId: area.id,
+            texto: pregunta.texto,
+            tipo: TipoPregunta.SI_NO,
+            orden: pregunta.orden,
+            obligatoria: pregunta.obligatoria,
+            activa: true,
+          },
+        });
+      }
+    }
   }
 }
 
@@ -837,9 +972,7 @@ async function seedUsuarios() {
     const passwordHash = await bcrypt.hash(usuario.password, 10);
 
     await prisma.usuario.upsert({
-      where: {
-        email: usuario.email,
-      },
+      where: { email: usuario.email },
       update: {
         passwordHash,
         nombre: usuario.nombre,
@@ -865,19 +998,11 @@ async function deleteEncuestasByIds(encuestaIds: number[]) {
   if (encuestaIds.length === 0) return;
 
   await prisma.respuesta.deleteMany({
-    where: {
-      encuestaId: {
-        in: encuestaIds,
-      },
-    },
+    where: { encuestaId: { in: encuestaIds } },
   });
 
   await prisma.encuesta.deleteMany({
-    where: {
-      id: {
-        in: encuestaIds,
-      },
-    },
+    where: { id: { in: encuestaIds } },
   });
 }
 
@@ -888,14 +1013,10 @@ async function createEncuestaConRespuestas(params: {
   ipAddress: string;
   fechaEnvio: Date;
   fechaDia: string;
-  preguntas: Array<{
-    id: number;
-    orden: number;
-    tipo: TipoPregunta;
-  }>;
+  preguntas: Array<{ id: number; orden: number; tipo: TipoPregunta }>;
   respuestas: RespuestaSeed[];
 }) {
-  const preguntasPorOrden = new Map(params.preguntas.map((pregunta) => [pregunta.orden, pregunta]));
+  const preguntasPorOrden = new Map(params.preguntas.map((p) => [p.orden, p]));
 
   await prisma.encuesta.create({
     data: {
@@ -906,27 +1027,18 @@ async function createEncuestaConRespuestas(params: {
       fechaEnvio: params.fechaEnvio,
       fechaDia: dateOnlyToDbDate(params.fechaDia),
       respuestas: {
-        create: params.respuestas.map((respuestaSeed) => {
-          const pregunta = preguntasPorOrden.get(respuestaSeed.orden);
+        create: params.respuestas.map((r) => {
+          const pregunta = preguntasPorOrden.get(r.orden);
 
           if (!pregunta) {
-            throw new Error(`No existe pregunta con orden ${respuestaSeed.orden}`);
+            throw new Error(`No existe pregunta con orden ${r.orden}`);
           }
 
           return {
             preguntaId: pregunta.id,
-            valorBooleano:
-              typeof respuestaSeed.valorBooleano === 'boolean'
-                ? respuestaSeed.valorBooleano
-                : null,
-            valorTexto:
-              typeof respuestaSeed.valorTexto === 'string'
-                ? respuestaSeed.valorTexto
-                : null,
-            valorNumero:
-              typeof respuestaSeed.valorNumero === 'number'
-                ? respuestaSeed.valorNumero
-                : null,
+            valorBooleano: typeof r.valorBooleano === 'boolean' ? r.valorBooleano : null,
+            valorTexto: typeof r.valorTexto === 'string' ? r.valorTexto : null,
+            valorNumero: typeof r.valorNumero === 'number' ? r.valorNumero : null,
           };
         }),
       },
@@ -936,39 +1048,32 @@ async function createEncuestaConRespuestas(params: {
 
 async function getPreguntasActivasPorArea(areaId: number) {
   return prisma.pregunta.findMany({
-    where: {
-      areaId,
-      activa: true,
-    },
-    orderBy: {
-      orden: 'asc',
-    },
-    select: {
-      id: true,
-      orden: true,
-      tipo: true,
-    },
+    where: { areaId, activa: true },
+    orderBy: { orden: 'asc' },
+    select: { id: true, orden: true, tipo: true },
   });
 }
 
 async function getColaboradoresActivosMap(areaId: number) {
   const colaboradores = await prisma.colaborador.findMany({
-    where: {
-      areaId,
-      activo: true,
-    },
-    select: {
-      id: true,
-      nombre: true,
-      apellido: true,
-    },
+    where: { areaId, activo: true },
+    select: { id: true, nombre: true, apellido: true },
   });
 
   return new Map(
-    colaboradores.map((colaborador) => [
-      normalizeFullName(colaborador.nombre, colaborador.apellido),
-      colaborador,
-    ]),
+    colaboradores.map((c) => [normalizeFullName(c.nombre, c.apellido), c]),
+  );
+}
+
+// Incluye colaboradores inactivos para referencias históricas en el seed
+async function getColaboradoresAllMap(areaId: number) {
+  const colaboradores = await prisma.colaborador.findMany({
+    where: { areaId },
+    select: { id: true, nombre: true, apellido: true },
+  });
+
+  return new Map(
+    colaboradores.map((c) => [normalizeFullName(c.nombre, c.apellido), c]),
   );
 }
 
@@ -981,29 +1086,23 @@ async function seedEncuestasControladasAreasReales(
 ) {
   console.log('Recreando encuestas controladas para áreas reales...');
 
-  const areaIds = Array.from(areasMap.values()).map((area) => area.id);
+  const areaIds = Array.from(areasMap.values()).map((a) => a.id);
 
-  const encuestasControladasExistentes = await prisma.encuesta.findMany({
+  const encuestasExistentes = await prisma.encuesta.findMany({
     where: {
-      areaId: {
-        in: areaIds,
-      },
-      ipAddress: {
-        startsWith: CONTROLLED_SEED_IP_PREFIX,
-      },
+      areaId: { in: areaIds },
+      ipAddress: { startsWith: CONTROLLED_SEED_IP_PREFIX },
     },
-    select: {
-      id: true,
-    },
+    select: { id: true },
   });
 
-  await deleteEncuestasByIds(encuestasControladasExistentes.map((encuesta) => encuesta.id));
+  await deleteEncuestasByIds(encuestasExistentes.map((e) => e.id));
 
   const cachePorArea = new Map<
     string,
     {
       preguntas: Awaited<ReturnType<typeof getPreguntasActivasPorArea>>;
-      colaboradores: Awaited<ReturnType<typeof getColaboradoresActivosMap>>;
+      colaboradores: Awaited<ReturnType<typeof getColaboradoresAllMap>>;
     }
   >();
 
@@ -1017,15 +1116,11 @@ async function seedEncuestasControladasAreasReales(
     if (!cachePorArea.has(encuestaSeed.areaSlug)) {
       cachePorArea.set(encuestaSeed.areaSlug, {
         preguntas: await getPreguntasActivasPorArea(area.id),
-        colaboradores: await getColaboradoresActivosMap(area.id),
+        colaboradores: await getColaboradoresAllMap(area.id),
       });
     }
 
-    const cache = cachePorArea.get(encuestaSeed.areaSlug);
-
-    if (!cache) {
-      throw new Error(`No se pudo cargar cache del área ${encuestaSeed.areaSlug}`);
-    }
+    const cache = cachePorArea.get(encuestaSeed.areaSlug)!;
 
     const colaborador = cache.colaboradores.get(encuestaSeed.colaborador);
 
@@ -1060,45 +1155,21 @@ async function seedAreaPruebasReportes() {
   console.log('Recreando área ficticia "Pruebas Reportes"...');
 
   const areaExistente = await prisma.area.findUnique({
-    where: {
-      slug: areaPruebasReportesSeed.slug,
-    },
-    select: {
-      id: true,
-    },
+    where: { slug: areaPruebasReportesSeed.slug },
+    select: { id: true },
   });
 
   if (areaExistente) {
     const encuestasExistentes = await prisma.encuesta.findMany({
-      where: {
-        areaId: areaExistente.id,
-      },
-      select: {
-        id: true,
-      },
+      where: { areaId: areaExistente.id },
+      select: { id: true },
     });
 
-    const encuestaIds = encuestasExistentes.map((encuesta) => encuesta.id);
+    await deleteEncuestasByIds(encuestasExistentes.map((e) => e.id));
 
-    await deleteEncuestasByIds(encuestaIds);
-
-    await prisma.pregunta.deleteMany({
-      where: {
-        areaId: areaExistente.id,
-      },
-    });
-
-    await prisma.colaborador.deleteMany({
-      where: {
-        areaId: areaExistente.id,
-      },
-    });
-
-    await prisma.area.delete({
-      where: {
-        id: areaExistente.id,
-      },
-    });
+    await prisma.pregunta.deleteMany({ where: { areaId: areaExistente.id } });
+    await prisma.colaborador.deleteMany({ where: { areaId: areaExistente.id } });
+    await prisma.area.delete({ where: { id: areaExistente.id } });
   }
 
   const area = await prisma.area.create({
@@ -1112,34 +1183,26 @@ async function seedAreaPruebasReportes() {
   });
 
   const colaboradores = await Promise.all(
-    colaboradoresPruebasReportesSeed.map((colaborador) =>
+    colaboradoresPruebasReportesSeed.map((c) =>
       prisma.colaborador.create({
-        data: {
-          nombre: colaborador.nombre,
-          apellido: colaborador.apellido,
-          areaId: area.id,
-          activo: true,
-        },
+        data: { nombre: c.nombre, apellido: c.apellido, areaId: area.id, activo: true },
       }),
     ),
   );
 
   const colaboradoresPorNombreCompleto = new Map(
-    colaboradores.map((colaborador) => [
-      normalizeFullName(colaborador.nombre, colaborador.apellido),
-      colaborador,
-    ]),
+    colaboradores.map((c) => [normalizeFullName(c.nombre, c.apellido), c]),
   );
 
   const preguntas = await Promise.all(
-    preguntasPruebasReportesSeed.map((pregunta) =>
+    preguntasPruebasReportesSeed.map((p) =>
       prisma.pregunta.create({
         data: {
           areaId: area.id,
-          texto: pregunta.texto,
-          tipo: pregunta.tipo,
-          orden: pregunta.orden,
-          obligatoria: pregunta.obligatoria,
+          texto: p.texto,
+          tipo: p.tipo,
+          orden: p.orden,
+          obligatoria: p.obligatoria,
           activa: true,
         },
       }),
@@ -1203,25 +1266,22 @@ main()
 INSTRUCCIONES DE EJECUCIÓN
 =======================================================
 
-1. Guarda este archivo como tu seed principal, por ejemplo:
+1. Guarda este archivo como tu seed principal:
    prisma/seed.ts
 
 2. Ejecuta:
    npm run seed
 
-3. Revisa en Prisma Studio:
-   npx prisma studio
-
-4. Levanta backend:
+3. Levanta backend:
    npm run start:dev
 
-5. Rango total del dataset controlado:
+4. Rango total del dataset controlado:
    fechaDesde=2026-04-01
    fechaHasta=2026-05-13
 
-6. Todas las encuestas controladas tienen fechaDia <= 2026-05-13.
+5. Todas las encuestas controladas tienen fechaDia <= 2026-05-13.
 
-7. Para obtener el id actual de "Pruebas Reportes":
+6. Para obtener el id actual de "Pruebas Reportes":
    GET /api/areas/pruebas-reportes
 
 =======================================================
@@ -1229,55 +1289,52 @@ NOTAS IMPORTANTES
 =======================================================
 
 - Las áreas reales se mantienen con upsert.
-- Las preguntas genéricas se mantienen por área y por orden.
-- Las encuestas controladas de áreas reales se eliminan/recrean por IP con prefijo 172.20.*.
-- El área "Pruebas Reportes" se elimina y recrea completa cada vez que corres el seed.
-- fechaEnvio es el timestamp técnico.
-- fechaDia es la fecha de negocio usada para filtros, reportes y rate limit.
-- %Satisfacción esperado aquí se calcula como:
-  respuestas SI / total de respuestas SI_NO del filtro.
+- Las preguntas se gestionan por (areaId, orden) con upsert.
+- Cada área real tiene 9 preguntas: 3 SI_NO genéricas (ord 1-3),
+  1 ESCALA_1_10 (ord 4), 3 SI_NO propias del área (ord 5-7),
+  1 DESCRIPCION opcional (ord 8), 1 NOMBRE_SOCIO (ord 9).
+- Juan Carlos (cafetería) y Lorena Peralta (áreas húmedas) existen en la DB
+  pero con activo=false. Sus encuestas históricas se conservan.
+- GET /areas no muestra áreas sin colaboradores activos, por lo que
+  Cafetería y Áreas Húmedas no aparecen públicamente hasta que se
+  asignen colaboradores activos desde el panel admin.
+- Las encuestas controladas de áreas reales se eliminan/recrean por IP
+  con prefijo 172.20.*.
+- El área "Pruebas Reportes" se elimina y recrea completa cada seed.
 
 =======================================================
 RESUMEN ESPERADO DEL DATASET CONTROLADO
 
-Regla usada:
+Regla:
 - Promedio escala = promedio de respuestas ESCALA_1_10.
 - Promotores = escala 9-10; Pasivos = 7-8; Detractores = 0-6.
 - NPS = %Promotores - %Detractores.
 - %Satisfacción = Sí / (Sí + No) usando todas las preguntas SI_NO del filtro.
+- Cada encuesta de área real tiene 6 preguntas SI_NO.
+- Cada encuesta de Pruebas Reportes tiene 4 preguntas SI_NO.
 
-Por área:
-| Filtro | Encuestas | Promedio escala | Promotores | Pasivos | Detractores | NPS | Sí | No | %Satisfacción |
+Por área (áreas reales):
+| Área | Enc | Promedio | Prom. | Pasivos | Detrac. | NPS | Sí | No | %Sat |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| Alimentos y Bebidas | 6 | 7.5 | 2 | 2 | 2 | 0 | 17 | 7 | 70.83% |
-| Área Comercial | 8 | 7.88 | 4 | 2 | 2 | 25 | 21 | 11 | 65.62% |
-| Área de Socios | 5 | 7.8 | 2 | 2 | 1 | 20 | 15 | 5 | 75% |
-| Áreas Húmedas | 5 | 8 | 2 | 2 | 1 | 20 | 16 | 4 | 80% |
-| Cafetería | 8 | 8.38 | 4 | 3 | 1 | 37.5 | 26 | 6 | 81.25% |
+| Alimentos y Bebidas | 6 | 7.5 | 2 | 2 | 2 | 0 | 24 | 12 | 66.67% |
+| Área Comercial | 8 | 7.88 | 4 | 2 | 2 | 25 | 33 | 15 | 68.75% |
+| Área de Socios | 5 | 7.8 | 2 | 2 | 1 | 20 | 23 | 7 | 76.67% |
+| Áreas Húmedas | 5 | 8.0 | 2 | 2 | 1 | 20 | 24 | 6 | 80% |
+| Cafetería | 8 | 8.38 | 4 | 3 | 1 | 37.5 | 41 | 7 | 85.42% |
 | Pruebas Reportes | 16 | 7.81 | 7 | 5 | 4 | 18.75 | 48 | 16 | 75% |
 
 Por colaborador:
-| Filtro | Encuestas | Promedio escala | Promotores | Pasivos | Detractores | NPS | Sí | No | %Satisfacción |
+| Colaborador | Enc | Promedio | Prom. | Pasivos | Detrac. | NPS | Sí | No | %Sat |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| Aracely Frias | 6 | 7.5 | 2 | 2 | 2 | 0 | 17 | 7 | 70.83% |
-| Silvia Medina | 4 | 8.25 | 2 | 1 | 1 | 25 | 11 | 5 | 68.75% |
-| Viviana Anrango | 4 | 7.5 | 2 | 1 | 1 | 25 | 10 | 6 | 62.5% |
-| Michelle Donoso | 5 | 7.8 | 2 | 2 | 1 | 20 | 15 | 5 | 75% |
-| Lorena Peralta | 5 | 8 | 2 | 2 | 1 | 20 | 16 | 4 | 80% |
-| Juan Carlos | 8 | 8.38 | 4 | 3 | 1 | 37.5 | 26 | 6 | 81.25% |
+| Aracely Frias | 6 | 7.5 | 2 | 2 | 2 | 0 | 24 | 12 | 66.67% |
+| Silvia Medina | 4 | 8.25 | 2 | 1 | 1 | 25 | 18 | 6 | 75% |
+| Viviana Anrango | 4 | 7.5 | 2 | 1 | 1 | 25 | 15 | 9 | 62.5% |
+| Michelle Donoso | 5 | 7.8 | 2 | 2 | 1 | 20 | 23 | 7 | 76.67% |
+| Lorena Peralta | 5 | 8.0 | 2 | 2 | 1 | 20 | 24 | 6 | 80% |
+| Juan Carlos | 8 | 8.38 | 4 | 3 | 1 | 37.5 | 41 | 7 | 85.42% |
 | Ana Reporter | 4 | 7.5 | 2 | 1 | 1 | 25 | 11 | 5 | 68.75% |
 | Luis Filtro | 4 | 8.25 | 2 | 1 | 1 | 25 | 12 | 4 | 75% |
 | Carla Excel | 4 | 7.25 | 1 | 2 | 1 | 0 | 11 | 5 | 68.75% |
 | Diego Validacion | 4 | 8.25 | 2 | 1 | 1 | 25 | 14 | 2 | 87.5% |
-
-Filtros útiles de comparación:
-| Filtro | Encuestas | Promedio escala | Promotores | Pasivos | Detractores | NPS | Sí | No | %Satisfacción |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| General 2026-04-01 a 2026-05-13 | 48 | 7.9 | 21 | 16 | 11 | 20.83 | 143 | 49 | 74.48% |
-| Solo abril 2026-04-01 a 2026-04-30 | 27 | 8.04 | 11 | 12 | 4 | 25.93 | 86 | 22 | 79.63% |
-| Solo mayo 2026-05-01 a 2026-05-13 | 21 | 7.71 | 10 | 4 | 7 | 14.29 | 57 | 27 | 67.86% |
-| Socio Carlos Andrade | 6 | 8.67 | 4 | 1 | 1 | 50 | 21 | 3 | 87.5% |
-| Socio María López | 6 | 8.17 | 2 | 4 | 0 | 33.33 | 20 | 4 | 83.33% |
-| Socio Jorge Cevallos | 5 | 7 | 1 | 2 | 2 | -20 | 13 | 7 | 65% |
 =======================================================
 */

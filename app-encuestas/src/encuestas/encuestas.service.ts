@@ -2,8 +2,6 @@ import {
   Injectable,
   BadRequestException,
   NotFoundException,
-  HttpException,
-  HttpStatus,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { SubmitEncuestaDto } from './dto/submit-encuesta.dto';
@@ -29,16 +27,8 @@ export class EncuestasService {
     }
 
     const fechaDia = getEcuadorTodayForDb();
-
-    const existing = await this.prisma.encuesta.findFirst({
-      where: { ipAddress, areaId: dto.areaId, fechaDia },
-    });
-    if (existing) {
-      throw new HttpException(
-        'Ya enviaste una encuesta para esta área hoy.',
-        HttpStatus.TOO_MANY_REQUESTS,
-      );
-    }
+    // ipAddress se conserva para auditoría, pero no se usa como rate limit
+    // porque varios socios pueden compartir IP pública por NAT.
 
     const preguntas = await this.prisma.pregunta.findMany({
       where: { areaId: dto.areaId, activa: true },
