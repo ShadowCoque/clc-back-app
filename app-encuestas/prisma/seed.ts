@@ -52,7 +52,7 @@ function normalizeFullName(nombre: string, apellido?: string | null): string {
 }
 
 // Para las áreas reales con estructura de 9 preguntas:
-// 1-3 SI_NO genéricas, 4 ESCALA_1_10, 5-7 SI_NO propias del área, 8 DESCRIPCION, 9 NOMBRE_SOCIO
+// 1-3 SI_NO genéricas, 4-6 SI_NO propias del área, 7 ESCALA_1_10, 8 DESCRIPCION, 9 NOMBRE_SOCIO
 function makeRespuestasNueva(
   siNoGenerico: [boolean, boolean, boolean],
   escala: number,
@@ -64,10 +64,10 @@ function makeRespuestasNueva(
     { orden: 1, valorBooleano: siNoGenerico[0] },
     { orden: 2, valorBooleano: siNoGenerico[1] },
     { orden: 3, valorBooleano: siNoGenerico[2] },
-    { orden: 4, valorNumero: escala },
-    { orden: 5, valorBooleano: siNoArea[0] },
-    { orden: 6, valorBooleano: siNoArea[1] },
-    { orden: 7, valorBooleano: siNoArea[2] },
+    { orden: 4, valorBooleano: siNoArea[0] },
+    { orden: 5, valorBooleano: siNoArea[1] },
+    { orden: 6, valorBooleano: siNoArea[2] },
+    { orden: 7, valorNumero: escala },
     { orden: 8, valorTexto: comentario },
     { orden: 9, valorTexto: nombreSocio },
   ];
@@ -121,12 +121,6 @@ const areasSeed = [
     descripcion: 'Área relacionada con piscina, sauna, turco, hidromasaje u otros espacios húmedos.',
     imagenUrl: '/areas/areas-humedas.jpg',
   },
-  {
-    nombre: 'Cafetería',
-    slug: 'cafeteria',
-    descripcion: 'Área encargada de la atención en cafetería.',
-    imagenUrl: '/areas/cafeteria.jpg',
-  },
 ];
 
 // =======================================================
@@ -144,7 +138,6 @@ const colaboradoresSeed = [
   { nombre: 'Michelle', apellido: 'Donoso', areaSlug: 'area-socios', activo: true },
   // Colaboradores pendientes de confirmar — se dejan inactivos
   { nombre: 'Lorena', apellido: 'Peralta', areaSlug: 'areas-humedas', activo: false },
-  { nombre: 'Juan Carlos', apellido: '', areaSlug: 'cafeteria', activo: false },
 ];
 
 // =======================================================
@@ -174,7 +167,7 @@ const preguntasGenericasSeed = [
   {
     texto: '¿Qué tan probable es que recomiende el club?',
     tipo: TipoPregunta.ESCALA_1_10,
-    orden: 4,
+    orden: 7,
     obligatoria: true,
   },
   {
@@ -200,29 +193,24 @@ const preguntasEspecificasPorAreaSeed: Record<
   Array<{ texto: string; orden: number; obligatoria: boolean }>
 > = {
   'alimentos-bebidas': [
-    { texto: '¿La presentación de los alimentos o bebidas fue adecuada?', orden: 5, obligatoria: true },
-    { texto: '¿El tiempo de atención fue razonable?', orden: 6, obligatoria: true },
-    { texto: '¿El espacio de atención se encontró limpio y ordenado?', orden: 7, obligatoria: true },
+    { texto: '¿La presentación de los alimentos o bebidas fue adecuada?', orden: 4, obligatoria: true },
+    { texto: '¿El tiempo de atención fue razonable?', orden: 5, obligatoria: true },
+    { texto: '¿El espacio de atención se encontró limpio y ordenado?', orden: 6, obligatoria: true },
   ],
   'area-comercial': [
-    { texto: '¿La información recibida fue clara y completa?', orden: 5, obligatoria: true },
-    { texto: '¿El trámite o requerimiento fue gestionado con agilidad?', orden: 6, obligatoria: true },
-    { texto: '¿Recibió seguimiento adecuado a su solicitud?', orden: 7, obligatoria: true },
+    { texto: '¿La información recibida fue clara y completa?', orden: 4, obligatoria: true },
+    { texto: '¿El trámite o requerimiento fue gestionado con agilidad?', orden: 5, obligatoria: true },
+    { texto: '¿Recibió seguimiento adecuado a su solicitud?', orden: 6, obligatoria: true },
   ],
   'area-socios': [
-    { texto: '¿La información sobre su cuenta o requerimiento fue clara?', orden: 5, obligatoria: true },
-    { texto: '¿La gestión realizada por el área fue eficiente?', orden: 6, obligatoria: true },
-    { texto: '¿Recibió una atención personalizada y respetuosa?', orden: 7, obligatoria: true },
-  ],
-  'cafeteria': [
-    { texto: '¿Los productos recibidos fueron de buena calidad?', orden: 5, obligatoria: true },
-    { texto: '¿El tiempo de entrega fue adecuado?', orden: 6, obligatoria: true },
-    { texto: '¿El espacio de cafetería se encontró limpio y ordenado?', orden: 7, obligatoria: true },
+    { texto: '¿La información sobre su cuenta o requerimiento fue clara?', orden: 4, obligatoria: true },
+    { texto: '¿La gestión realizada por el área fue eficiente?', orden: 5, obligatoria: true },
+    { texto: '¿Recibió una atención personalizada y respetuosa?', orden: 6, obligatoria: true },
   ],
   'areas-humedas': [
-    { texto: '¿Las instalaciones se encontraron limpias y en buen estado?', orden: 5, obligatoria: true },
-    { texto: '¿La temperatura y funcionamiento de los servicios fue adecuado?', orden: 6, obligatoria: true },
-    { texto: '¿Percibió orden y seguridad durante el uso del área?', orden: 7, obligatoria: true },
+    { texto: '¿Las instalaciones se encontraron limpias y en buen estado?', orden: 4, obligatoria: true },
+    { texto: '¿La temperatura y funcionamiento de los servicios fue adecuado?', orden: 5, obligatoria: true },
+    { texto: '¿Percibió orden y seguridad durante el uso del área?', orden: 6, obligatoria: true },
   ],
 };
 
@@ -604,111 +592,6 @@ const encuestasControladasAreasRealesSeed: EncuestaAreaRealSeed[] = [
       'Muy buena experiencia en piscina y sauna.', 'Carlos Andrade',
     ),
   },
-  // ── Cafetería – Juan Carlos (inactivo, datos históricos) ─────────────────
-  {
-    areaSlug: 'cafeteria',
-    nombreSocio: 'Valeria Castro',
-    colaborador: 'Juan Carlos',
-    ipAddress: '172.20.50.1',
-    fechaEnvio: new Date('2026-04-01T16:40:00-05:00'),
-    fechaDia: '2026-04-01',
-    respuestas: makeRespuestasNueva(
-      [true, true, true], 10,
-      [true, true, true],
-      'Café y atención excelentes.', 'Valeria Castro',
-    ),
-  },
-  {
-    areaSlug: 'cafeteria',
-    nombreSocio: 'Ana Beltrán',
-    colaborador: 'Juan Carlos',
-    ipAddress: '172.20.50.2',
-    fechaEnvio: new Date('2026-04-07T17:15:00-05:00'),
-    fechaDia: '2026-04-07',
-    respuestas: makeRespuestasNueva(
-      [true, true, true], 9,
-      [true, true, true],
-      'Muy buena atención en caja y entrega.', 'Ana Beltrán',
-    ),
-  },
-  {
-    areaSlug: 'cafeteria',
-    nombreSocio: 'Jorge Cevallos',
-    colaborador: 'Juan Carlos',
-    ipAddress: '172.20.50.3',
-    fechaEnvio: new Date('2026-04-16T18:00:00-05:00'),
-    fechaDia: '2026-04-16',
-    respuestas: makeRespuestasNueva(
-      [true, false, true], 8,
-      [true, true, true],
-      'Servicio bueno, faltó variedad disponible.', 'Jorge Cevallos',
-    ),
-  },
-  {
-    areaSlug: 'cafeteria',
-    nombreSocio: 'María López',
-    colaborador: 'Juan Carlos',
-    ipAddress: '172.20.50.4',
-    fechaEnvio: new Date('2026-04-25T15:30:00-05:00'),
-    fechaDia: '2026-04-25',
-    respuestas: makeRespuestasNueva(
-      [true, true, true], 7,
-      [true, true, false],
-      'Buena atención, pero el área estaba llena.', 'María López',
-    ),
-  },
-  {
-    areaSlug: 'cafeteria',
-    nombreSocio: 'Patricia Molina',
-    colaborador: 'Juan Carlos',
-    ipAddress: '172.20.50.5',
-    fechaEnvio: new Date('2026-05-02T11:50:00-05:00'),
-    fechaDia: '2026-05-02',
-    respuestas: makeRespuestasNueva(
-      [false, true, false], 6,
-      [true, false, false],
-      'El producto estuvo bien, pero la atención fue lenta.', 'Patricia Molina',
-    ),
-  },
-  {
-    areaSlug: 'cafeteria',
-    nombreSocio: 'Gabriela Moncayo',
-    colaborador: 'Juan Carlos',
-    ipAddress: '172.20.50.6',
-    fechaEnvio: new Date('2026-05-07T12:10:00-05:00'),
-    fechaDia: '2026-05-07',
-    respuestas: makeRespuestasNueva(
-      [true, true, false], 8,
-      [true, true, true],
-      'Atención cordial, faltó confirmar disponibilidad.', 'Gabriela Moncayo',
-    ),
-  },
-  {
-    areaSlug: 'cafeteria',
-    nombreSocio: 'Esteban Paredes',
-    colaborador: 'Juan Carlos',
-    ipAddress: '172.20.50.7',
-    fechaEnvio: new Date('2026-05-10T13:15:00-05:00'),
-    fechaDia: '2026-05-10',
-    respuestas: makeRespuestasNueva(
-      [true, true, true], 9,
-      [true, true, true],
-      'Servicio rápido y amable.', 'Esteban Paredes',
-    ),
-  },
-  {
-    areaSlug: 'cafeteria',
-    nombreSocio: 'Roberto Castillo',
-    colaborador: 'Juan Carlos',
-    ipAddress: '172.20.50.8',
-    fechaEnvio: new Date('2026-05-13T17:35:00-05:00'),
-    fechaDia: '2026-05-13',
-    respuestas: makeRespuestasNueva(
-      [true, true, true], 10,
-      [true, true, true],
-      'Excelente experiencia en cafetería.', 'Roberto Castillo',
-    ),
-  },
 ];
 
 // =======================================================
@@ -920,7 +803,7 @@ async function seedPreguntas(
   areasMap: Map<string, { id: number; nombre: string; slug: string }>,
 ) {
   for (const area of areasMap.values()) {
-    // Preguntas genéricas (posiciones 1, 2, 3, 4, 8, 9)
+    // Preguntas genéricas (posiciones 1, 2, 3, 7, 8, 9)
     for (const pregunta of preguntasGenericasSeed) {
       await prisma.pregunta.upsert({
         where: { areaId_orden: { areaId: area.id, orden: pregunta.orden } },
@@ -941,7 +824,7 @@ async function seedPreguntas(
       });
     }
 
-    // Preguntas propias del área (posiciones 5, 6, 7)
+    // Preguntas propias del área (posiciones 4, 5, 6)
     const especificas = preguntasEspecificasPorAreaSeed[area.slug];
     if (especificas) {
       for (const pregunta of especificas) {
@@ -1291,13 +1174,13 @@ NOTAS IMPORTANTES
 - Las áreas reales se mantienen con upsert.
 - Las preguntas se gestionan por (areaId, orden) con upsert.
 - Cada área real tiene 9 preguntas: 3 SI_NO genéricas (ord 1-3),
-  1 ESCALA_1_10 (ord 4), 3 SI_NO propias del área (ord 5-7),
+  3 SI_NO propias del área (ord 4-6), 1 ESCALA_1_10 (ord 7),
   1 DESCRIPCION opcional (ord 8), 1 NOMBRE_SOCIO (ord 9).
-- Juan Carlos (cafetería) y Lorena Peralta (áreas húmedas) existen en la DB
-  pero con activo=false. Sus encuestas históricas se conservan.
+- Lorena Peralta (áreas húmedas) existe en la DB con activo=false.
+  Sus encuestas históricas se conservan.
 - GET /areas no muestra áreas sin colaboradores activos, por lo que
-  Cafetería y Áreas Húmedas no aparecen públicamente hasta que se
-  asignen colaboradores activos desde el panel admin.
+  Áreas Húmedas no aparece públicamente hasta que se asigne un
+  colaborador activo desde el panel admin.
 - Las encuestas controladas de áreas reales se eliminan/recrean por IP
   con prefijo 172.20.*.
 - El área "Pruebas Reportes" se elimina y recrea completa cada seed.
@@ -1320,7 +1203,6 @@ Por área (áreas reales):
 | Área Comercial | 8 | 7.88 | 4 | 2 | 2 | 25 | 33 | 15 | 68.75% |
 | Área de Socios | 5 | 7.8 | 2 | 2 | 1 | 20 | 23 | 7 | 76.67% |
 | Áreas Húmedas | 5 | 8.0 | 2 | 2 | 1 | 20 | 24 | 6 | 80% |
-| Cafetería | 8 | 8.38 | 4 | 3 | 1 | 37.5 | 41 | 7 | 85.42% |
 | Pruebas Reportes | 16 | 7.81 | 7 | 5 | 4 | 18.75 | 48 | 16 | 75% |
 
 Por colaborador:
@@ -1331,7 +1213,6 @@ Por colaborador:
 | Viviana Anrango | 4 | 7.5 | 2 | 1 | 1 | 25 | 15 | 9 | 62.5% |
 | Michelle Donoso | 5 | 7.8 | 2 | 2 | 1 | 20 | 23 | 7 | 76.67% |
 | Lorena Peralta | 5 | 8.0 | 2 | 2 | 1 | 20 | 24 | 6 | 80% |
-| Juan Carlos | 8 | 8.38 | 4 | 3 | 1 | 37.5 | 41 | 7 | 85.42% |
 | Ana Reporter | 4 | 7.5 | 2 | 1 | 1 | 25 | 11 | 5 | 68.75% |
 | Luis Filtro | 4 | 8.25 | 2 | 1 | 1 | 25 | 12 | 4 | 75% |
 | Carla Excel | 4 | 7.25 | 1 | 2 | 1 | 0 | 11 | 5 | 68.75% |
