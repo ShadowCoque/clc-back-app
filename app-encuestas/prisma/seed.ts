@@ -161,7 +161,7 @@ const usuariosSeed = [
     email: 'recursoshumanos@clublacampina.com.ec',
     password: 'RecursosHumanos2026!',
     nombre: 'Recursos Humanos',
-    rol: RolUsuario.REPORTES,
+    rol: RolUsuario.ADMIN,
   },
 ];
 
