@@ -10,6 +10,7 @@ import {
   formatFechaDia,
   formatHoraEcuador,
 } from '../common/utils/ecuador-date.util';
+import { esTextoPreguntaNombreSocio } from '../common/utils/nombre-socio.util';
 
 // ─── Colores institucionales ────────────────────────────────────────────────
 const COLOR = {
@@ -250,7 +251,11 @@ export class ReportesService {
           areaAccum.escalaValores.push(r.valorNumero);
           if (encuesta.colaboradorId) colabMap.get(encuesta.colaboradorId)!.escalaValores.push(r.valorNumero);
 
-        } else if (tipo === TipoPregunta.DESCRIPCION && r.valorTexto) {
+        } else if (
+          tipo === TipoPregunta.DESCRIPCION &&
+          r.valorTexto &&
+          !esTextoPreguntaNombreSocio(r.pregunta.texto)
+        ) {
           totalComentarios++;
           areaAccum.comentarios++;
           if (encuesta.colaboradorId) colabMap.get(encuesta.colaboradorId)!.comentarios++;
@@ -568,7 +573,11 @@ export class ReportesService {
           ps.escalaValores.push(r.valorNumero);
           allEscalaValores.push(r.valorNumero);
           if (colabId) colabStatsMap.get(colabId)!.escalaValores.push(r.valorNumero);
-        } else if (r.pregunta.tipo === TipoPregunta.DESCRIPCION && r.valorTexto) {
+        } else if (
+          r.pregunta.tipo === TipoPregunta.DESCRIPCION &&
+          r.valorTexto &&
+          !esTextoPreguntaNombreSocio(r.pregunta.texto)
+        ) {
           totalComentarios++;
           if (colabId) colabStatsMap.get(colabId)!.comentarios++;
 
@@ -615,7 +624,13 @@ export class ReportesService {
         else if (r.pregunta.tipo === TipoPregunta.SI_NO) {
           if (r.valorBooleano === true) a.si++;
           else if (r.valorBooleano === false) a.no++;
-        } else if (r.pregunta.tipo === TipoPregunta.DESCRIPCION && r.valorTexto) a.comentarios++;
+        } else if (
+          r.pregunta.tipo === TipoPregunta.DESCRIPCION &&
+          r.valorTexto &&
+          !esTextoPreguntaNombreSocio(r.pregunta.texto)
+        ) {
+          a.comentarios++;
+        }
       }
     }
 
