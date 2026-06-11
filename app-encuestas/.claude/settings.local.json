@@ -4,7 +4,13 @@
       "Bash(npx prisma *)",
       "Bash(npm run *)",
       "Bash(npm install *)",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "PowerShell(git clone --depth 1 https://github.com/ShadowCoque/clc-front-app \"$env:TEMP\\\\clc-front-app-review\")",
+      "PowerShell(Get-ChildItem *)",
+      "PowerShell(npm run *)",
+      "PowerShell(npx eslint src/encuestas/encuestas.service.ts src/encuestas/dto/submit-encuesta.dto.ts src/common/utils/nombre-socio.util.ts prisma/scripts/reparar-anonimos.ts)",
+      "PowerShell(Get-Content *)",
+      "PowerShell(Remove-Item *)"
     ]
   }
 }

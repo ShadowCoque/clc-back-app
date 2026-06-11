@@ -7,6 +7,7 @@ import {
   IsArray,
   Min,
   Max,
+  MaxLength,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -38,6 +39,7 @@ export class SubmitEncuestaDto {
   colaboradorId?: number;
 
   @IsString()
+  @MaxLength(150)
   nombreSocio: string;
 
   @IsArray()

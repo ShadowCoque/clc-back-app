@@ -7,6 +7,7 @@
   "license": "UNLICENSED",
   "scripts": {
     "seed": "ts-node prisma/seed.ts",
+    "reparar:anonimos": "ts-node prisma/scripts/reparar-anonimos.ts",
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
