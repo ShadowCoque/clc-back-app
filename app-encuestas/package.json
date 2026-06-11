@@ -8,6 +8,7 @@
   "scripts": {
     "seed": "ts-node prisma/seed.ts",
     "reparar:anonimos": "ts-node prisma/scripts/reparar-anonimos.ts",
+    "reparar:anonimos:dry": "ts-node prisma/scripts/reparar-anonimos.ts --dry-run",
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",

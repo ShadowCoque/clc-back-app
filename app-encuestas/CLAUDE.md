@@ -11,6 +11,8 @@ El sistema permite:
 - Autenticar usuarios administrativos con JWT.
 - Consultar reportes y exportarlos a Excel.
 
+Frontend (repo aparte): https://github.com/ShadowCoque/clc-front-app — React + Vite, código en `app-encuestas/`.
+
 ## Reglas de contexto
 
 Antes de generar o modificar código, lee solo archivos necesarios:
@@ -43,55 +45,50 @@ Modelos principales:
 - `Area`
 - `Colaborador`
 - `Pregunta`
-- `Encuesta`
-- `Respuesta`
+- `Encuesta` (incluye `nombreSocio`, `ipAddress`, `fechaEnvio` y `fechaDia` tipo Date)
+- `Respuesta` (`valorBooleano`, `valorTexto`, `valorNumero`)
 - `Usuario`
 
 Enums:
 
-- `TipoPregunta`: `SI_NO`, `DESCRIPCION`, `NOMBRE_SOCIO`
+- `TipoPregunta`: `SI_NO`, `DESCRIPCION`, `NOMBRE_SOCIO`, `ESCALA_1_10`
 - `RolUsuario`: `ADMIN`, `GERENTE`, `REPORTES`
 
 No existe `RateLimitLog`. No crearlo ni usarlo.
 
-El control de 1 encuesta por IP/área/día se hace consultando `Encuesta` con:
-
-- `ipAddress`
-- `areaId`
-- rango diario de `fechaEnvio`
-
 ## Datos iniciales del seed
 
-Áreas activas:
+Áreas activas (no existe Cafetería):
 
 - Alimentos y Bebidas — `alimentos-bebidas`
 - Área Comercial — `area-comercial`
 - Área de Socios — `area-socios`
 - Áreas Húmedas — `areas-humedas`
-- Cafetería — `cafeteria`
 
 Colaboradores:
 
 - Alimentos y Bebidas: Aracely Frias
 - Área Comercial: Silvia Medina, Viviana Anrango
 - Área de Socios: Michelle Donoso
-- Áreas Húmedas: Lorena Peralta
-- Cafetería: Juan Carlos
+- Áreas Húmedas: Lorena Peralta (inactiva por defecto)
 
-Preguntas iniciales por área:
+Preguntas por área — genéricas (órdenes 1, 2, 3, 7, 8, 9):
 
 1. ¿Fue atendido de manera cordial y oportuna? — `SI_NO`
 2. ¿Su solicitud o requerimiento fue resuelto adecuadamente? — `SI_NO`
-3. ¿El espacio o instalaciones estuvieron en buenas condiciones? — `SI_NO`
-4. ¿Su experiencia general cumplió con sus expectativas? — `SI_NO`
-5. Cuéntenos brevemente en qué podríamos mejorar o qué le agradó. — `DESCRIPCION`
-6. Nombres y apellidos del socio — `NOMBRE_SOCIO`
+3. ¿Su experiencia general cumplió con sus expectativas? — `SI_NO`
+7. ¿Qué tan probable es que recomiende el club? — `ESCALA_1_10`
+8. Cuéntenos brevemente en qué podríamos mejorar o qué le agradó. — `DESCRIPCION` (opcional)
+9. Nombres y apellidos del socio — `NOMBRE_SOCIO`
+
+Más 3 preguntas `SI_NO` específicas por área en los órdenes 4, 5 y 6 (ver `prisma/seed.ts`).
 
 Usuarios seed:
 
 - `soporte.ti@clublacampina.com.ec` — `ADMIN`
-- `gerencia@clublacampina.com.ec` — `REPORTES`
-- `administracion@clublacampina.com.ec` — `REPORTES`
+- `gerencia@clublacampina.com.ec` — `GERENTE`
+- `administracion@clublacampina.com.ec` — `ADMIN`
+- `recursoshumanos@clublacampina.com.ec` — `ADMIN`
 
 No hardcodear contraseñas en código nuevo.
 
@@ -118,7 +115,9 @@ Usar errores HTTP correctos:
 - `ForbiddenException`
 - `NotFoundException`
 - `ConflictException`
-- `TooManyRequestsException` o `HttpException` con status 429
+- `HttpException` con status 429 si se necesita Too Many Requests
+
+`isolatedModules` está activo: tipos de Express en firmas decoradas (`@Req()`, `@Res()`) deben importarse con `import type`.
 
 ## Reglas funcionales
 
@@ -141,24 +140,46 @@ Panel admin:
 - Puede listar colaboradores inactivos.
 - Puede listar preguntas inactivas si el endpoint lo requiere.
 
-Roles:
+Roles y guards (estado real del código):
 
-- `ADMIN`: administración.
-- `REPORTES`: consulta/exportación.
-- Endpoints públicos no requieren JWT.
-- Reportes requieren JWT.
+- Mutaciones de áreas/colaboradores/preguntas: `JwtAuthGuard` + `@Roles(ADMIN)`.
+- Reportes (`/api/reportes/*`): solo `JwtAuthGuard` (cualquier rol autenticado).
+- Endpoints públicos (GET áreas/preguntas, POST encuestas, login) no requieren JWT.
 
-## Rate limit de encuestas
+## Rate limit y `ipAddress`
 
-No usar `RateLimitLog`.
+No existe límite de 1 encuesta por IP/área/día: se desactivó a propósito porque
+varios socios comparten IP pública por NAT. `ipAddress` se guarda solo para
+auditoría. No reintroducir ese límite sin que la tarea lo pida.
 
-En `POST /encuestas`:
+`ThrottlerModule` está configurado en `app.module.ts` (100 req/60s) pero no hay
+`ThrottlerGuard` aplicado, así que hoy no limita nada.
 
-1. Obtener IP desde request.
-2. Calcular inicio y fin del día actual.
-3. Buscar si existe encuesta con misma `ipAddress`, `areaId` y `fechaEnvio` dentro del día.
-4. Si existe, responder 429: `Ya enviaste una encuesta para esta área hoy.`
-5. Si no existe, guardar encuesta y respuestas en transacción Prisma.
+## Nombre del socio (defensa del servidor)
+
+El servidor no confía en `dto.nombreSocio`. En `POST /encuestas`
+(`EncuestasService.resolverNombreSocio`): si llega vacío o "Anónimo" (con o sin
+tilde, cualquier capitalización), el nombre se recupera de la respuesta a la
+pregunta `NOMBRE_SOCIO` o, en su defecto, de una `DESCRIPCION` cuyo enunciado
+pida el nombre del socio. Heurística compartida en
+`src/common/utils/nombre-socio.util.ts`; debe mantenerse sincronizada con
+`src/utils/preguntaNombre.ts` del frontend.
+
+Validación de texto: una respuesta de solo espacios cuenta como vacía
+(`valorTexto.trim()`); todo `valorTexto` se guarda con trim.
+
+Script one-off de reparación de encuestas "Anónimo" históricas:
+`npm run reparar:anonimos:dry` para previsualizar sin escribir, y
+`npm run reparar:anonimos` para aplicar.
+
+## Build y ejecución
+
+- `npm run build` emite a `dist/` con entry `dist/main.js`. `prisma/` y
+  `prisma.config.ts` están excluidos en `tsconfig.build.json` porque corren con
+  `ts-node`/CLI de Prisma; no los agregues de vuelta al build.
+- Producción: `npm run build` y luego `npm run start:prod` (`node dist/main`).
+- Desarrollo: `npm run start:dev`.
+- Seed: `npm run seed`.
 
 ## Calidad esperada
 

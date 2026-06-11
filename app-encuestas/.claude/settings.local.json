@@ -10,7 +10,14 @@
       "PowerShell(npm run *)",
       "PowerShell(npx eslint src/encuestas/encuestas.service.ts src/encuestas/dto/submit-encuesta.dto.ts src/common/utils/nombre-socio.util.ts prisma/scripts/reparar-anonimos.ts)",
       "PowerShell(Get-Content *)",
-      "PowerShell(Remove-Item *)"
+      "PowerShell(Remove-Item *)",
+      "PowerShell(git clone --depth 30 https://github.com/ShadowCoque/clc-front-app \"$env:TEMP\\\\clc-front-app-review\"; git -C \"$env:TEMP\\\\clc-front-app-review\" log --oneline -15)",
+      "PowerShell(git -C \"$env:TEMP\\\\clc-front-app-review\" log -3 --format='%h %ci %s'; git -C \"$env:TEMP\\\\clc-front-app-review\" diff 6ed7b61 f7bca9d --stat)",
+      "PowerShell(git -C \"$env:TEMP\\\\clc-front-app-review\" diff 6ed7b61 f7bca9d -- app-encuestas/src/types/index.ts app-encuestas/src/components/dashboard/FiltersBar.tsx app-encuestas/src/components/dashboard/ResumenCharts.tsx)",
+      "PowerShell(node dist/main)",
+      "PowerShell($resp = $null; foreach \\($i in 1..10\\) { try { $resp = Invoke-WebRequest -Uri 'http://127.0.0.1:3000/api/areas' -UseBasicParsing -TimeoutSec 2; break } catch { Start-Sleep -Milliseconds 700 } }; if \\($resp\\) { \"HTTP $\\($resp.StatusCode\\)\"; $resp.Content.Substring\\(0, [Math]::Min\\(200, $resp.Content.Length\\)\\) } else { 'sin respuesta' })",
+      "PowerShell(Stop-Process *)",
+      "PowerShell(npx eslint --fix prisma/scripts/reparar-anonimos.ts; if \\($?\\) { 'LINT OK' })"
     ]
   }
 }

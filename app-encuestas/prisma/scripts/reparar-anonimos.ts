@@ -7,7 +7,9 @@
 //
 // Solo hace UPDATE de encuesta.nombreSocio. No borra nada.
 //
-// Ejecutar: npm run reparar:anonimos
+// Solo previsualizar: npm run reparar:anonimos:dry
+// Ejecutar de verdad: npm run reparar:anonimos
+// (no usar `npm run reparar:anonimos -- --dry-run`: npm se traga --dry-run)
 import 'dotenv/config';
 import { PrismaClient, TipoPregunta } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
@@ -28,7 +30,12 @@ const prisma = new PrismaClient({
   adapter,
 });
 
+const dryRun = process.argv.includes('--dry-run');
+
 async function main() {
+  if (dryRun) {
+    console.log('MODO DRY-RUN: no se escribirá nada en la base.\n');
+  }
   const encuestas = await prisma.encuesta.findMany({
     select: {
       id: true,
@@ -78,10 +85,12 @@ async function main() {
     // nombreSocio es VarChar(150) en la base.
     const nombreSocio = respuestaNombre.valorTexto.trim().slice(0, 150).trim();
 
-    await prisma.encuesta.update({
-      where: { id: encuesta.id },
-      data: { nombreSocio },
-    });
+    if (!dryRun) {
+      await prisma.encuesta.update({
+        where: { id: encuesta.id },
+        data: { nombreSocio },
+      });
+    }
 
     reparadas++;
     console.log(
@@ -89,7 +98,9 @@ async function main() {
     );
   }
 
-  console.log(`\nReparadas: ${reparadas}`);
+  console.log(
+    `\n${dryRun ? 'Reparables (dry-run)' : 'Reparadas'}: ${reparadas}`,
+  );
   console.log(
     `Anónimas de verdad (sin nombre en sus respuestas): ${sinNombre.length}` +
       (sinNombre.length > 0 ? ` — ids: ${sinNombre.join(', ')}` : ''),
