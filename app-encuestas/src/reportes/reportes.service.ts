@@ -135,17 +135,35 @@ export class ReportesService {
     await this.validateColaboradorArea(q.areaId, q.colaboradorId);
     const where = this.buildWhere(q);
 
-    const encuestas = await this.prisma.encuesta.findMany({
-      where,
-      include: {
-        area: { select: { id: true, nombre: true } },
-        colaborador: { select: { id: true, nombre: true, apellido: true } },
-        respuestas: {
-          include: { pregunta: { select: { id: true, texto: true, tipo: true } } },
+    // Las preguntas se cargan una sola vez (tabla pequeña) en lugar de unirse a
+    // cada respuesta: evita duplicar texto/tipo de pregunta en cada fila leída.
+    const [encuestas, preguntasDb] = await Promise.all([
+      this.prisma.encuesta.findMany({
+        where,
+        select: {
+          areaId: true,
+          colaboradorId: true,
+          nombreSocio: true,
+          fechaEnvio: true,
+          fechaDia: true,
+          area: { select: { id: true, nombre: true } },
+          colaborador: { select: { id: true, nombre: true, apellido: true } },
+          respuestas: {
+            select: {
+              preguntaId: true,
+              valorBooleano: true,
+              valorTexto: true,
+              valorNumero: true,
+            },
+          },
         },
-      },
-      orderBy: { fechaEnvio: 'desc' },
-    });
+        orderBy: { fechaEnvio: 'desc' },
+      }),
+      this.prisma.pregunta.findMany({
+        select: { id: true, texto: true, tipo: true },
+      }),
+    ]);
+    const preguntaPorId = new Map(preguntasDb.map((p) => [p.id, p]));
 
     const totalEncuestas = encuestas.length;
 
@@ -189,7 +207,10 @@ export class ReportesService {
     for (const encuesta of encuestas) {
       let escalaEncuesta: number | null = null;
       for (const r of encuesta.respuestas) {
-        if (r.pregunta.tipo === TipoPregunta.ESCALA_1_10 && r.valorNumero != null) {
+        if (
+          preguntaPorId.get(r.preguntaId)?.tipo === TipoPregunta.ESCALA_1_10 &&
+          r.valorNumero != null
+        ) {
           escalaEncuesta = r.valorNumero;
           break;
         }
@@ -220,13 +241,15 @@ export class ReportesService {
       }
 
       for (const r of encuesta.respuestas) {
-        const tipo = r.pregunta.tipo;
+        const pregunta = preguntaPorId.get(r.preguntaId);
+        if (!pregunta) continue;
+        const tipo = pregunta.tipo;
 
         if (tipo === TipoPregunta.SI_NO) {
           if (!pregSiNoMap.has(r.preguntaId))
-            pregSiNoMap.set(r.preguntaId, { id: r.preguntaId, texto: r.pregunta.texto, si: 0, no: 0 });
+            pregSiNoMap.set(r.preguntaId, { id: r.preguntaId, texto: pregunta.texto, si: 0, no: 0 });
           if (!areaAccum.preguntas.has(r.preguntaId))
-            areaAccum.preguntas.set(r.preguntaId, { texto: r.pregunta.texto, si: 0, no: 0 });
+            areaAccum.preguntas.set(r.preguntaId, { texto: pregunta.texto, si: 0, no: 0 });
 
           if (r.valorBooleano === true) {
             pregSiNoMap.get(r.preguntaId)!.si++;
@@ -243,9 +266,9 @@ export class ReportesService {
           }
 
         } else if (tipo === TipoPregunta.ESCALA_1_10 && r.valorNumero != null) {
-          if (!escalaQuestion) escalaQuestion = { id: r.preguntaId, texto: r.pregunta.texto };
+          if (!escalaQuestion) escalaQuestion = { id: r.preguntaId, texto: pregunta.texto };
           if (!areaAccum.escalas.has(r.preguntaId))
-            areaAccum.escalas.set(r.preguntaId, { texto: r.pregunta.texto, valores: [] });
+            areaAccum.escalas.set(r.preguntaId, { texto: pregunta.texto, valores: [] });
           areaAccum.escalas.get(r.preguntaId)!.valores.push(r.valorNumero);
           allEscalaValores.push(r.valorNumero);
           areaAccum.escalaValores.push(r.valorNumero);
@@ -254,7 +277,7 @@ export class ReportesService {
         } else if (
           tipo === TipoPregunta.DESCRIPCION &&
           r.valorTexto &&
-          !esTextoPreguntaNombreSocio(r.pregunta.texto)
+          !esTextoPreguntaNombreSocio(pregunta.texto)
         ) {
           totalComentarios++;
           areaAccum.comentarios++;
@@ -484,24 +507,47 @@ export class ReportesService {
     await this.validateColaboradorArea(q.areaId, q.colaboradorId);
     const where = this.buildWhere(q);
 
-    const encuestas = await this.prisma.encuesta.findMany({
-      where,
-      orderBy: { fechaEnvio: 'desc' },
-      include: {
-        area: { select: { id: true, nombre: true } },
-        colaborador: { select: { id: true, nombre: true, apellido: true } },
-        respuestas: {
-          include: { pregunta: { select: { id: true, texto: true, tipo: true, orden: true } } },
-          orderBy: { pregunta: { orden: 'asc' } },
+    // Misma estrategia que getResumen: preguntas en una sola consulta aparte
+    // en lugar de unirlas (duplicadas) a cada respuesta.
+    const [encuestas, preguntasDb] = await Promise.all([
+      this.prisma.encuesta.findMany({
+        where,
+        orderBy: { fechaEnvio: 'desc' },
+        select: {
+          id: true,
+          areaId: true,
+          colaboradorId: true,
+          nombreSocio: true,
+          ipAddress: true,
+          fechaEnvio: true,
+          fechaDia: true,
+          area: { select: { id: true, nombre: true } },
+          colaborador: { select: { id: true, nombre: true, apellido: true } },
+          respuestas: {
+            select: {
+              preguntaId: true,
+              valorBooleano: true,
+              valorTexto: true,
+              valorNumero: true,
+            },
+            orderBy: { pregunta: { orden: 'asc' } },
+          },
         },
-      },
-    });
+      }),
+      this.prisma.pregunta.findMany({
+        select: { id: true, texto: true, tipo: true, orden: true },
+      }),
+    ]);
+    const preguntaPorId = new Map(preguntasDb.map((p) => [p.id, p]));
 
-    // ── Preguntas únicas ordenadas ─────────────────────────────────────────
+    // ── Preguntas únicas ordenadas (solo las que tienen alguna respuesta) ──
     const preguntasMap = new Map<number, { id: number; texto: string; tipo: string; orden: number }>();
     for (const enc of encuestas) {
       for (const r of enc.respuestas) {
-        if (!preguntasMap.has(r.preguntaId)) preguntasMap.set(r.preguntaId, r.pregunta);
+        if (!preguntasMap.has(r.preguntaId)) {
+          const p = preguntaPorId.get(r.preguntaId);
+          if (p) preguntasMap.set(r.preguntaId, p);
+        }
       }
     }
     const preguntas = Array.from(preguntasMap.values()).sort((a, b) => a.orden - b.orden);
@@ -542,12 +588,18 @@ export class ReportesService {
       // Escala de esta encuesta (para clasificar comentarios)
       let escalaEncuesta: number | null = null;
       for (const r of enc.respuestas) {
-        if (r.pregunta.tipo === TipoPregunta.ESCALA_1_10 && r.valorNumero != null) {
+        if (
+          preguntaPorId.get(r.preguntaId)?.tipo === TipoPregunta.ESCALA_1_10 &&
+          r.valorNumero != null
+        ) {
           escalaEncuesta = r.valorNumero;
         }
       }
 
       for (const r of enc.respuestas) {
+        const pregunta = preguntaPorId.get(r.preguntaId);
+        if (!pregunta) continue;
+
         // Nombre de colaborador en Análisis Preguntas:
         // si hay filtro por colaborador → su nombre; si no → "Todos"
         const pregColabNombre =
@@ -556,8 +608,8 @@ export class ReportesService {
         if (!pregStatsMap.has(r.preguntaId)) {
           pregStatsMap.set(r.preguntaId, {
             id: r.preguntaId,
-            texto: r.pregunta.texto,
-            tipo:  r.pregunta.tipo,
+            texto: pregunta.texto,
+            tipo:  pregunta.tipo,
             areaId: enc.areaId,
             areaNombre: enc.area.nombre,
             colaboradorNombre: pregColabNombre,
@@ -566,17 +618,17 @@ export class ReportesService {
         }
         const ps = pregStatsMap.get(r.preguntaId)!;
 
-        if (r.pregunta.tipo === TipoPregunta.SI_NO) {
+        if (pregunta.tipo === TipoPregunta.SI_NO) {
           if (r.valorBooleano === true)  { ps.siCount++; allSiNo.si++; if (colabId) colabStatsMap.get(colabId)!.siCount++; }
           else if (r.valorBooleano === false) { ps.noCount++; allSiNo.no++; if (colabId) colabStatsMap.get(colabId)!.noCount++; }
-        } else if (r.pregunta.tipo === TipoPregunta.ESCALA_1_10 && r.valorNumero != null) {
+        } else if (pregunta.tipo === TipoPregunta.ESCALA_1_10 && r.valorNumero != null) {
           ps.escalaValores.push(r.valorNumero);
           allEscalaValores.push(r.valorNumero);
           if (colabId) colabStatsMap.get(colabId)!.escalaValores.push(r.valorNumero);
         } else if (
-          r.pregunta.tipo === TipoPregunta.DESCRIPCION &&
+          pregunta.tipo === TipoPregunta.DESCRIPCION &&
           r.valorTexto &&
-          !esTextoPreguntaNombreSocio(r.pregunta.texto)
+          !esTextoPreguntaNombreSocio(pregunta.texto)
         ) {
           totalComentarios++;
           if (colabId) colabStatsMap.get(colabId)!.comentarios++;
@@ -620,14 +672,16 @@ export class ReportesService {
       const a = areasResumen.get(enc.areaId)!;
       a.total++;
       for (const r of enc.respuestas) {
-        if (r.pregunta.tipo === TipoPregunta.ESCALA_1_10 && r.valorNumero != null) a.escalas.push(r.valorNumero);
-        else if (r.pregunta.tipo === TipoPregunta.SI_NO) {
+        const pregunta = preguntaPorId.get(r.preguntaId);
+        if (!pregunta) continue;
+        if (pregunta.tipo === TipoPregunta.ESCALA_1_10 && r.valorNumero != null) a.escalas.push(r.valorNumero);
+        else if (pregunta.tipo === TipoPregunta.SI_NO) {
           if (r.valorBooleano === true) a.si++;
           else if (r.valorBooleano === false) a.no++;
         } else if (
-          r.pregunta.tipo === TipoPregunta.DESCRIPCION &&
+          pregunta.tipo === TipoPregunta.DESCRIPCION &&
           r.valorTexto &&
-          !esTextoPreguntaNombreSocio(r.pregunta.texto)
+          !esTextoPreguntaNombreSocio(pregunta.texto)
         ) {
           a.comentarios++;
         }

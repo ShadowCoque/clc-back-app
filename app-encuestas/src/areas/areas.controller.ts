@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  Header,
   Post,
   Patch,
   Param,
@@ -21,6 +22,7 @@ export class AreasController {
   constructor(private areasService: AreasService) {}
 
   @Get()
+  @Header('Cache-Control', 'public, max-age=60')
   findAll() {
     return this.areasService.findAll();
   }
@@ -33,6 +35,7 @@ export class AreasController {
   }
 
   @Get(':slug')
+  @Header('Cache-Control', 'public, max-age=60')
   findBySlug(@Param('slug') slug: string) {
     return this.areasService.findBySlug(slug);
   }

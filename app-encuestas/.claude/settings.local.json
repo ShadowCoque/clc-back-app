@@ -17,7 +17,11 @@
       "PowerShell(node dist/main)",
       "PowerShell($resp = $null; foreach \\($i in 1..10\\) { try { $resp = Invoke-WebRequest -Uri 'http://127.0.0.1:3000/api/areas' -UseBasicParsing -TimeoutSec 2; break } catch { Start-Sleep -Milliseconds 700 } }; if \\($resp\\) { \"HTTP $\\($resp.StatusCode\\)\"; $resp.Content.Substring\\(0, [Math]::Min\\(200, $resp.Content.Length\\)\\) } else { 'sin respuesta' })",
       "PowerShell(Stop-Process *)",
-      "PowerShell(npx eslint --fix prisma/scripts/reparar-anonimos.ts; if \\($?\\) { 'LINT OK' })"
+      "PowerShell(npx eslint --fix prisma/scripts/reparar-anonimos.ts; if \\($?\\) { 'LINT OK' })",
+      "PowerShell(npm *)",
+      "PowerShell($env:PORT='3999'; $env:HOST='127.0.0.1'; node dist/main)",
+      "PowerShell(Start-Sleep -Seconds 4; $r = Invoke-WebRequest -Uri 'http://127.0.0.1:3999/api/areas' -Headers @{ 'Accept-Encoding' = 'gzip' } -UseBasicParsing; \"Status: $\\($r.StatusCode\\)\"; \"Cache-Control: $\\($r.Headers['Cache-Control']\\)\"; \"Content-Encoding: $\\($r.Headers['Content-Encoding']\\)\"; \"Body length: $\\($r.Content.Length\\)\")",
+      "PowerShell($r = Invoke-WebRequest -Uri 'http://127.0.0.1:3999/api/areas/alimentos-bebidas' -Headers @{ 'Accept-Encoding' = 'gzip' } -UseBasicParsing; \"Status: $\\($r.StatusCode\\)\"; \"Content-Encoding: $\\($r.Headers['Content-Encoding']\\)\"; \"RawContentLength: $\\($r.RawContentLength\\)\")"
     ]
   }
 }

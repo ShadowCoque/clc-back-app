@@ -6,6 +6,8 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { RespuestaItemDto, SubmitEncuestaDto } from './dto/submit-encuesta.dto';
 import { Pregunta, TipoPregunta } from '@prisma/client';
+
+type PreguntaSubmit = Pick<Pregunta, 'id' | 'texto' | 'tipo' | 'obligatoria'>;
 import { getEcuadorTodayForDb } from '../common/utils/ecuador-date.util';
 import {
   esNombreAnonimo,
@@ -17,16 +19,27 @@ export class EncuestasService {
   constructor(private prisma: PrismaService) {}
 
   async submit(dto: SubmitEncuestaDto, ipAddress: string) {
-    const area = await this.prisma.area.findUnique({
-      where: { id: dto.areaId },
-    });
+    const [area, colaborador, preguntas] = await Promise.all([
+      this.prisma.area.findUnique({
+        where: { id: dto.areaId },
+        select: { activa: true },
+      }),
+      dto.colaboradorId !== undefined
+        ? this.prisma.colaborador.findUnique({
+            where: { id: dto.colaboradorId },
+            select: { activo: true, areaId: true },
+          })
+        : Promise.resolve(null),
+      this.prisma.pregunta.findMany({
+        where: { areaId: dto.areaId, activa: true },
+        select: { id: true, texto: true, tipo: true, obligatoria: true },
+      }),
+    ]);
+
     if (!area || !area.activa)
       throw new NotFoundException('Área no encontrada o inactiva');
 
     if (dto.colaboradorId !== undefined) {
-      const colaborador = await this.prisma.colaborador.findUnique({
-        where: { id: dto.colaboradorId },
-      });
       if (!colaborador || !colaborador.activo)
         throw new BadRequestException('Colaborador no encontrado o inactivo');
       if (colaborador.areaId !== dto.areaId)
@@ -38,10 +51,6 @@ export class EncuestasService {
     const fechaDia = getEcuadorTodayForDb();
     // ipAddress se conserva para auditoría, pero no se usa como rate limit
     // porque varios socios pueden compartir IP pública por NAT.
-
-    const preguntas = await this.prisma.pregunta.findMany({
-      where: { areaId: dto.areaId, activa: true },
-    });
 
     for (const pregunta of preguntas) {
       if (!pregunta.obligatoria) continue;
@@ -97,39 +106,36 @@ export class EncuestasService {
 
     const nombreSocio = this.resolverNombreSocio(dto, preguntas);
 
-    const encuesta = await this.prisma.$transaction(async (tx) => {
-      const nueva = await tx.encuesta.create({
-        data: {
-          areaId: dto.areaId,
-          colaboradorId: dto.colaboradorId ?? null,
-          nombreSocio,
-          ipAddress,
-          fechaEnvio: new Date(),
-          fechaDia,
-        },
-      });
-
-      for (const r of dto.respuestas) {
-        const pregunta = preguntas.find((p) => p.id === r.preguntaId);
-        if (!pregunta) continue;
-
+    const preguntaPorId = new Map(preguntas.map((p) => [p.id, p]));
+    const respuestasData = dto.respuestas
+      .filter((r) => preguntaPorId.has(r.preguntaId))
+      .map((r) => {
+        const pregunta = preguntaPorId.get(r.preguntaId)!;
         let valorTexto = r.valorTexto?.trim() || null;
         if (pregunta.tipo === TipoPregunta.NOMBRE_SOCIO && !valorTexto) {
           valorTexto = nombreSocio;
         }
+        return {
+          preguntaId: r.preguntaId,
+          valorBooleano: r.valorBooleano ?? null,
+          valorTexto,
+          valorNumero: r.valorNumero ?? null,
+        };
+      });
 
-        await tx.respuesta.create({
-          data: {
-            encuestaId: nueva.id,
-            preguntaId: r.preguntaId,
-            valorBooleano: r.valorBooleano ?? null,
-            valorTexto,
-            valorNumero: r.valorNumero ?? null,
-          },
-        });
-      }
-
-      return nueva;
+    // create anidado + createMany: una sola operación atómica en lugar de una
+    // transacción interactiva con un insert por respuesta.
+    const encuesta = await this.prisma.encuesta.create({
+      data: {
+        areaId: dto.areaId,
+        colaboradorId: dto.colaboradorId ?? null,
+        nombreSocio,
+        ipAddress,
+        fechaEnvio: new Date(),
+        fechaDia,
+        respuestas: { createMany: { data: respuestasData } },
+      },
+      select: { id: true },
     });
 
     return { message: 'Encuesta enviada correctamente', id: encuesta.id };
@@ -143,7 +149,7 @@ export class EncuestasService {
    */
   private resolverNombreSocio(
     dto: SubmitEncuestaDto,
-    preguntas: Pregunta[],
+    preguntas: PreguntaSubmit[],
   ): string {
     const nombreDto = dto.nombreSocio.trim();
     if (!esNombreAnonimo(nombreDto)) return nombreDto;

@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  Header,
   Post,
   Patch,
   Delete,
@@ -23,6 +24,7 @@ export class PreguntasController {
   constructor(private preguntasService: PreguntasService) {}
 
   @Get()
+  @Header('Cache-Control', 'public, max-age=60')
   findByArea(@Query('areaId', ParseIntPipe) areaId: number) {
     return this.preguntasService.findByArea(areaId);
   }

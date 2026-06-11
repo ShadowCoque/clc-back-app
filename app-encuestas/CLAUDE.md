@@ -103,6 +103,13 @@ Usar:
 - `bcryptjs` para validar contraseñas
 - Guards para JWT y roles
 - `exceljs` para exportación Excel
+- `compression` (gzip) aplicado globalmente en `main.ts`
+- En reportes, las preguntas se cargan una sola vez y se consultan vía `Map`
+  (`preguntaPorId`); no volver a hacer `include { pregunta }` por respuesta.
+- Endpoints públicos GET (áreas, preguntas) responden con
+  `Cache-Control: public, max-age=60`.
+- `main.ts` escucha en `process.env.HOST` (fallback `192.168.2.91`) y
+  `process.env.PORT` (fallback 3000).
 
 No usar mocks ni arrays hardcodeados como fuente de datos.
 
@@ -152,8 +159,9 @@ No existe límite de 1 encuesta por IP/área/día: se desactivó a propósito po
 varios socios comparten IP pública por NAT. `ipAddress` se guarda solo para
 auditoría. No reintroducir ese límite sin que la tarea lo pida.
 
-`ThrottlerModule` está configurado en `app.module.ts` (100 req/60s) pero no hay
-`ThrottlerGuard` aplicado, así que hoy no limita nada.
+No hay rate limiting activo: `@nestjs/throttler` se desinstaló porque estaba
+configurado sin guard y no limitaba nada. Si se necesita en el futuro (p. ej.
+anti fuerza bruta en login), reinstalarlo y aplicar un guard puntual.
 
 ## Nombre del socio (defensa del servidor)
 
