@@ -33,6 +33,8 @@ model Area {
   preguntas     Pregunta[]
   colaboradores Colaborador[]
   encuestas     Encuesta[]
+
+  usuariosPermitidos UsuarioArea[]
 }
 
 model Colaborador {
@@ -138,7 +140,27 @@ model Usuario {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Áreas a las que este usuario está limitado para ver reportes.
+  // Vacío = sin restricción (ve todas las áreas).
+  areasPermitidas UsuarioArea[]
+
   @@index([email])
   @@index([rol])
   @@index([activo])
+}
+
+// Tabla puente Usuario ↔ Area: acota a qué áreas puede ver reportes un usuario.
+// Si un usuario no tiene filas aquí, no está restringido (ve todas las áreas).
+model UsuarioArea {
+  usuarioId Int
+  areaId    Int
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  area    Area    @relation(fields: [areaId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@id([usuarioId, areaId])
+  @@index([usuarioId])
+  @@index([areaId])
 }

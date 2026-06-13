@@ -14,6 +14,7 @@ export class AuthService {
   async login(dto: LoginDto) {
     const usuario = await this.prisma.usuario.findFirst({
       where: { email: dto.email, activo: true },
+      include: { areasPermitidas: { select: { areaId: true } } },
     });
 
     if (!usuario) throw new UnauthorizedException('Credenciales inválidas');
@@ -21,7 +22,15 @@ export class AuthService {
     const passwordOk = await bcrypt.compare(dto.password, usuario.passwordHash);
     if (!passwordOk) throw new UnauthorizedException('Credenciales inválidas');
 
-    const payload = { sub: usuario.id, email: usuario.email, rol: usuario.rol };
+    // Vacío = sin restricción (ve todas las áreas).
+    const areas = usuario.areasPermitidas.map((a) => a.areaId);
+
+    const payload = {
+      sub: usuario.id,
+      email: usuario.email,
+      rol: usuario.rol,
+      areas,
+    };
     const access_token = this.jwtService.sign(payload);
 
     return {
@@ -31,6 +40,7 @@ export class AuthService {
         nombre: usuario.nombre,
         email: usuario.email,
         rol: usuario.rol,
+        areasPermitidas: areas,
       },
     };
   }

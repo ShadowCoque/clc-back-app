@@ -21,7 +21,13 @@
       "PowerShell(npm *)",
       "PowerShell($env:PORT='3999'; $env:HOST='127.0.0.1'; node dist/main)",
       "PowerShell(Start-Sleep -Seconds 4; $r = Invoke-WebRequest -Uri 'http://127.0.0.1:3999/api/areas' -Headers @{ 'Accept-Encoding' = 'gzip' } -UseBasicParsing; \"Status: $\\($r.StatusCode\\)\"; \"Cache-Control: $\\($r.Headers['Cache-Control']\\)\"; \"Content-Encoding: $\\($r.Headers['Content-Encoding']\\)\"; \"Body length: $\\($r.Content.Length\\)\")",
-      "PowerShell($r = Invoke-WebRequest -Uri 'http://127.0.0.1:3999/api/areas/alimentos-bebidas' -Headers @{ 'Accept-Encoding' = 'gzip' } -UseBasicParsing; \"Status: $\\($r.StatusCode\\)\"; \"Content-Encoding: $\\($r.Headers['Content-Encoding']\\)\"; \"RawContentLength: $\\($r.RawContentLength\\)\")"
+      "PowerShell($r = Invoke-WebRequest -Uri 'http://127.0.0.1:3999/api/areas/alimentos-bebidas' -Headers @{ 'Accept-Encoding' = 'gzip' } -UseBasicParsing; \"Status: $\\($r.StatusCode\\)\"; \"Content-Encoding: $\\($r.Headers['Content-Encoding']\\)\"; \"RawContentLength: $\\($r.RawContentLength\\)\")",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "PowerShell(npx prisma migrate status)",
+      "PowerShell(npx prisma migrate dev --name usuario_area)",
+      "PowerShell(npx prisma generate)",
+      "PowerShell(npx ts-node prisma/scripts/_verify.ts)"
     ]
   }
 }

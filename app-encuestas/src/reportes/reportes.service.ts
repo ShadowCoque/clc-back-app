@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
 import { Response } from 'express';
 import { Workbook, Worksheet, Row } from 'exceljs';
 import { TipoPregunta, Prisma } from '@prisma/client';
@@ -107,33 +107,64 @@ export class ReportesService {
   constructor(private prisma: PrismaService) {}
 
   // ─── Validación colaborador–área ─────────────────────────────────────────
-  private async validateColaboradorArea(areaId?: number, colaboradorId?: number): Promise<void> {
-    if (!areaId || !colaboradorId) return;
-    const existe = await this.prisma.colaborador.findFirst({
-      where: { id: colaboradorId, areaId },
-      select: { id: true },
+  // areasPermitidas vacío = usuario sin restricción (ve todas las áreas).
+  private async validateColaboradorArea(
+    areaId: number | undefined,
+    colaboradorId: number | undefined,
+    areasPermitidas: number[],
+  ): Promise<void> {
+    if (colaboradorId === undefined) return;
+
+    const colaborador = await this.prisma.colaborador.findUnique({
+      where: { id: colaboradorId },
+      select: { areaId: true },
     });
-    if (!existe) {
+
+    if (areaId !== undefined && (!colaborador || colaborador.areaId !== areaId)) {
       throw new BadRequestException(
         `El colaborador ${colaboradorId} no pertenece al área ${areaId}.`,
       );
     }
+
+    if (
+      areasPermitidas.length > 0 &&
+      (!colaborador || !areasPermitidas.includes(colaborador.areaId))
+    ) {
+      throw new ForbiddenException(
+        'No tiene acceso a los reportes de ese colaborador.',
+      );
+    }
   }
 
-  private buildWhere(q: ResumenQueryDto): Prisma.EncuestaWhereInput {
+  private buildWhere(
+    q: ResumenQueryDto,
+    areasPermitidas: number[],
+  ): Prisma.EncuestaWhereInput {
     const where: Prisma.EncuestaWhereInput = {};
     if (q.areaId !== undefined) where.areaId = q.areaId;
     if (q.colaboradorId !== undefined) where.colaboradorId = q.colaboradorId;
     if (q.nombreSocio) where.nombreSocio = { contains: q.nombreSocio, mode: 'insensitive' };
     const fechaDiaFilter = buildFechaDiaFilter(q.fechaDesde, q.fechaHasta);
     if (fechaDiaFilter) where.fechaDia = fechaDiaFilter;
+
+    // Scoping por usuario: limita las encuestas a las áreas permitidas.
+    if (areasPermitidas.length > 0) {
+      if (q.areaId !== undefined) {
+        if (!areasPermitidas.includes(q.areaId)) {
+          throw new ForbiddenException('No tiene acceso a los reportes de esa área.');
+        }
+      } else {
+        where.areaId = { in: areasPermitidas };
+      }
+    }
+
     return where;
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  async getResumen(q: ResumenQueryDto) {
-    await this.validateColaboradorArea(q.areaId, q.colaboradorId);
-    const where = this.buildWhere(q);
+  async getResumen(q: ResumenQueryDto, areasPermitidas: number[] = []) {
+    await this.validateColaboradorArea(q.areaId, q.colaboradorId, areasPermitidas);
+    const where = this.buildWhere(q, areasPermitidas);
 
     // Las preguntas se cargan una sola vez (tabla pequeña) en lugar de unirse a
     // cada respuesta: evita duplicar texto/tipo de pregunta en cada fila leída.
@@ -467,9 +498,9 @@ export class ReportesService {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  async getEncuestas(q: EncuestasQueryDto) {
-    await this.validateColaboradorArea(q.areaId, q.colaboradorId);
-    const where = this.buildWhere(q);
+  async getEncuestas(q: EncuestasQueryDto, areasPermitidas: number[] = []) {
+    await this.validateColaboradorArea(q.areaId, q.colaboradorId, areasPermitidas);
+    const where = this.buildWhere(q, areasPermitidas);
     const page  = q.page ?? 1;
     const limit = q.limit ?? 20;
     const skip  = (page - 1) * limit;
@@ -503,9 +534,9 @@ export class ReportesService {
   // ═══════════════════════════════════════════════════════════════════════════
   // EXPORTAR EXCEL
   // ═══════════════════════════════════════════════════════════════════════════
-  async exportarExcel(q: EncuestasQueryDto, res: Response) {
-    await this.validateColaboradorArea(q.areaId, q.colaboradorId);
-    const where = this.buildWhere(q);
+  async exportarExcel(q: EncuestasQueryDto, res: Response, areasPermitidas: number[] = []) {
+    await this.validateColaboradorArea(q.areaId, q.colaboradorId, areasPermitidas);
+    const where = this.buildWhere(q, areasPermitidas);
 
     // Misma estrategia que getResumen: preguntas en una sola consulta aparte
     // en lugar de unirlas (duplicadas) a cada respuesta.
